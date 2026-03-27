@@ -1,0 +1,98 @@
+### 0.1 View All Institutions (The Multi-Tenant Core)
+GET http://localhost:8080/api/institutions
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJub3ZvckBraW5nc3J1bm5lci50ZWNoIiwiaWF0IjoxNzcyNTUxNDQ5LCJleHAiOjE3NzI2Mzc4NDl9.bJXEXbjLL69Po2t4HQDv-YNppvQ2B9fDtUP6yl-OZ7U
+
+### 0.2 Create a New Institution
+POST http://localhost:8080/api/institutions
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlcmljQGtpbmdzcnVubmVyLnRlY2giLCJpYXQiOjE3NzI1NTAyMjAsImV4cCI6MTc3MjYzNjYyMH0.x_wGnXaIjRzA86x3g6JgfcPCKxnI42fQP-Wnx1bQ4ok
+Content-Type: application/json
+
+{
+  "name": "UMaT - University of Mines and Technology",
+  "sector": "ACADEMIA"
+}
+
+### 1. View All Departments
+GET http://localhost:8080/api/departments
+
+### 2. View All Workers (You should see yourself here!)
+GET http://localhost:8080/api/workers
+
+### 3. Create a New Department
+POST http://localhost:8080/api/departments
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJlcmljQGtpbmdzcnVubmVyLnRlY2giLCJpYXQiOjE3NzI1NTAyMjAsImV4cCI6MTc3MjYzNjYyMH0.x_wGnXaIjRzA86x3g6JgfcPCKxnI42fQP-Wnx1bQ4ok
+Content-Type: application/json
+
+{
+  "name": "Human Resources",
+  "description": "Manages employee recruitment and well-being"
+}
+
+### 4. Hire a New Worker (Assigning to HR - assuming HR gets ID 2)
+POST http://localhost:8080/api/workers
+Content-Type: application/json
+
+{
+  "fullName": "Eric",
+  "email": "eric@kingsrunner.tech",
+  "jobTitle": "HR Manager",
+  "department": {
+    "id": 2
+  }
+}
+
+### 5. Update a Worker's Job Title (Assuming Super Admin is ID 1)
+PUT http://localhost:8080/api/workers/1
+Content-Type: application/json
+
+{
+  "fullName": "Novor Prince Edem Kofi",
+  "email": "admin@kingsrunner.tech",
+  "jobTitle": "Global Enterprise Architect",
+  "department": {
+    "id": 1
+  }
+}
+
+### 6. Fire a Worker (Delete them by ID)
+DELETE http://localhost:8080/api/workers/2
+
+### 7. Update a Department (Assuming System Admin is ID 1)
+PUT http://localhost:8080/api/departments/1
+Content-Type: application/json
+
+{
+  "name": "System Administration & Security",
+  "description": "Core ERP Management and Global Access Control"
+}
+
+### 8. Hire a Worker & Trigger the AI (Phase 3 Test)
+POST http://localhost:8080/api/workers
+Content-Type: application/json
+
+{
+  "fullName": "Kofi",
+  "email": "kofi@kingsrunner.tech",
+  "jobTitle": "Junior DevOps Engineer",
+  "department": {
+    "id": 1
+  }
+}
+
+### 9. Claim Absolute Authority (Login)
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "novor@kingsrunner.tech",
+  "password": "Admin@123"
+}
+
+### 10. Worker Login Test
+POST http://localhost:8080/api/auth/login
+Content-Type: application/json
+
+{
+  "email": "eric@kingsrunner.tech",
+  "password": "Worker@123"
+}
