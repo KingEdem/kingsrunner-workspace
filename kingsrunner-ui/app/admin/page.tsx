@@ -3,13 +3,14 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Building2, Lock, CheckCircle2, Clock, Plus, Pencil, Trash2, LogOut, Settings, TrendingUp, Heart, Truck, DollarSign, Sparkles, Loader2
+  Users, Building2, Lock, CheckCircle2, Clock, Plus, Pencil, Trash2, LogOut, Settings, TrendingUp, Heart, Truck, DollarSign, Sparkles, Loader2, Activity, Layers, Shield, Megaphone, MessageSquare, Pin, ArrowRight, Eye, AlertTriangle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -244,384 +245,242 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
-        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+    <div className="min-h-screen bg-zinc-50/80 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-50 selection:bg-emerald-500 selection:text-white pb-12">
+      {/* Premium Header */}
+      <header className="sticky top-0 z-40 border-b border-zinc-200 dark:border-zinc-800 bg-white/90 dark:bg-zinc-950/90 backdrop-blur-xl shadow-sm">
+        <div className="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3 mt-1">
             <TIRLogo size="sm" />
-            <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent hidden sm:inline">Institution Admin</span>
+            <span className="text-xl font-black tracking-wider bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent uppercase hidden sm:inline">
+              Institution Admin
+            </span>
           </div>
-
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <ThemeToggle />
-            <Button variant="ghost" size="sm" className="text-muted-foreground">
-              <Settings className="w-4 h-4 mr-2" /> Settings
-            </Button>
-            <Avatar className="w-9 h-9 bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 transition-all cursor-pointer">
-              <AvatarFallback className="text-emerald-500 text-sm">IA</AvatarFallback>
+            <Avatar className="w-9 h-9 border-2 border-emerald-500/20 shadow-sm cursor-pointer hover:border-emerald-500/50 transition-colors bg-white">
+              <AvatarFallback className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 text-xs font-bold">IA</AvatarFallback>
             </Avatar>
-            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-foreground" title="Logout">
-              <LogOut className="w-5 h-5" />
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-zinc-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors">
+              <LogOut className="w-4 h-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          {stats.map((stat, i) => (
-            <Card key={i} className="bg-card border-border hover-lift transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
-              <CardContent className="pt-6">
-                <div className="text-3xl font-bold text-foreground">{stat.value}</div>
-                <p className="text-sm text-emerald-500">{stat.label}</p>
-              </CardContent>
-            </Card>
-          ))}
+      <main className="max-w-[1400px] mx-auto px-6 py-8 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+
+        {/* Raised Tile Stat Cards */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-emerald-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"><Users className="w-5 h-5" /></div>
+              <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">{workers.length}</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Total Workers</p></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-cyan-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-500"><Layers className="w-5 h-5" /></div>
+              <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">{modules.filter(m => m.status === 'active').length}</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Active Modules</p></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-amber-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500"><MessageSquare className="w-5 h-5" /></div>
+              <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">4</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Active Lounges</p></div>
+            </CardContent>
+          </Card>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-teal-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-500"><Activity className="w-5 h-5" /></div>
+              <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">99%</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">System Health</p></div>
+            </CardContent>
+          </Card>
         </div>
 
-        <Tabs defaultValue="modules" className="space-y-6">
-          <TabsList className="bg-secondary/50">
-            <TabsTrigger value="modules" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">ERP Modules</TabsTrigger>
-            <TabsTrigger value="workers" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Workers</TabsTrigger>
-            <TabsTrigger value="departments" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Departments</TabsTrigger>
-          </TabsList>
+        {/* Master Control Layout: Vertical Sidebar + Content Area */}
+        <Tabs defaultValue="lounges" className="flex flex-col md:flex-row gap-8 items-start">
 
-          {/* ERP Modules Tab */}
-          <TabsContent value="modules" className="space-y-6">
-            <div>
-              <h2 className="text-xl font-semibold text-foreground mb-2">Platform ERP Modules</h2>
-              <p className="text-sm text-muted-foreground">
-                {modules.filter(m => m.status === 'active').length} of {modules.length} modules active for this institution
-              </p>
-            </div>
+          {/* Left Sidebar Navigation */}
+          <div className="w-full md:w-64 shrink-0 sticky top-24">
+            <TabsList className="flex flex-col h-auto w-full bg-white dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 shadow-sm rounded-xl p-2 gap-1.5">
+              <TabsTrigger value="lounges" className="justify-start px-4 py-3 data-[state=active]:bg-emerald-500 data-[state=active]:text-white w-full text-zinc-600 dark:text-zinc-400 font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-zinc-50 dark:data-[state=inactive]:hover:bg-zinc-800/50">
+                <MessageSquare className="w-4 h-4 mr-3" /> Lounges & Comms
+              </TabsTrigger>
+              <TabsTrigger value="workers" className="justify-start px-4 py-3 data-[state=active]:bg-emerald-500 data-[state=active]:text-white w-full text-zinc-600 dark:text-zinc-400 font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-zinc-50 dark:data-[state=inactive]:hover:bg-zinc-800/50">
+                <Users className="w-4 h-4 mr-3" /> Directory
+              </TabsTrigger>
+              <TabsTrigger value="modules" className="justify-start px-4 py-3 data-[state=active]:bg-emerald-500 data-[state=active]:text-white w-full text-zinc-600 dark:text-zinc-400 font-bold tracking-wide transition-all data-[state=inactive]:hover:bg-zinc-50 dark:data-[state=inactive]:hover:bg-zinc-800/50">
+                <Layers className="w-4 h-4 mr-3" /> ERP Modules
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {modules.map(module => (
-                <Card
-                  key={module.id}
-                  className={`bg-card border-border relative transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
-                    module.status === 'active'
-                      ? 'border-emerald-500/50 shadow-emerald-500/20 hover:shadow-emerald-500/30'
-                      : module.status === 'pending'
-                        ? 'border-orange-500/30 hover:shadow-orange-500/20'
-                        : 'hover:shadow-muted/20'
-                  }`}
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between">
-                      <div className={`p-2 rounded-lg ${
-                        module.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' :
-                        module.status === 'pending' ? 'bg-orange-500/20 text-orange-500' : 'bg-secondary text-muted-foreground'
-                      }`}>
-                        {getModuleIcon(module.icon)}
-                      </div>
-                      {getStatusBadge(module.status)}
-                    </div>
-                    <CardTitle className="text-foreground mt-3">{module.name}</CardTitle>
-                    <CardDescription>{module.description}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {module.status === 'active' ? (
-                      <Button onClick={() => setSelectedModule(module)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
-                        Manage Module
-                      </Button>
-                    ) : module.status === 'pending' ? (
-                      <Button disabled className="w-full bg-orange-500/30 text-orange-300 border border-orange-500/50">
-                        Pending Approval
-                      </Button>
-                    ) : (
-                      <Button variant="outline" onClick={() => handleApplyForAccess(module)} className="w-full border-border text-muted-foreground hover:text-foreground hover:border-emerald-500/50 transition-all duration-300">
-                        <Lock className="w-4 h-4 mr-2" /> Apply for Access
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+          {/* Right Main Content Area */}
+          <div className="flex-1 min-w-0 w-full">
 
-            {/* Module Management Dialog */}
-            {selectedModule && (
-              <Dialog open={!!selectedModule} onOpenChange={() => setSelectedModule(null)}>
-                <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto terminal-scrollbar">
-                  <DialogHeader>
-                    <DialogTitle className="text-foreground flex items-center gap-2">
-                      <Users className="w-5 h-5 text-emerald-500" />
-                      {selectedModule.name}
-                    </DialogTitle>
-                    <DialogDescription>Grant or revoke worker access to this module. Changes take effect immediately.</DialogDescription>
-                  </DialogHeader>
+            {/* TAB: LOUNGES & COMMS */}
+            <TabsContent value="lounges" className="m-0 space-y-6 animate-in fade-in duration-300">
+              <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
-                  <div className="space-y-6">
-                    {/* Worker Access Table */}
-                    <div className="border border-border rounded-lg overflow-hidden">
-                      <Table>
-                        <TableHeader>
-                          <TableRow className="border-border hover:bg-transparent">
-                            <TableHead className="text-muted-foreground">Departments</TableHead>
-                            <TableHead className="text-muted-foreground">Worker</TableHead>
-                            <TableHead className="text-muted-foreground">Email</TableHead>
-                            <TableHead className="text-muted-foreground">Access</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {workers.slice(0, 3).map((worker) => (
-                            <TableRow key={worker.id} className="border-border">
-                              <TableCell><Badge className="bg-emerald-500 text-white">{worker.department}</Badge></TableCell>
-                              <TableCell className="text-foreground">
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="w-6 h-6 bg-emerald-500/20 border border-emerald-500/30">
-                                    <AvatarFallback className="text-emerald-500 text-xs">{worker.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                                  </Avatar>
-                                  {worker.name}
-                                </div>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">{worker.email}</TableCell>
-                              <TableCell><Switch defaultChecked className="data-[state=checked]:bg-emerald-500" /></TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </div>
-
-                    {/* Module Configuration */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-foreground">
-                        <Settings className="w-5 h-5 text-emerald-500" />
-                        <h3 className="font-medium">Module Configuration</h3>
-                      </div>
-                      <p className="text-sm text-muted-foreground">Tenant-level settings for {selectedModule.name}.</p>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Default Working Hours / Week</Label>
-                          <Input type="number" defaultValue={moduleConfig.defaultWorkingHours} className="bg-input border-border" />
+                {/* Left Col: Lounge Moderation */}
+                <div className="xl:col-span-2 space-y-6">
+                  <Card className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                    <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 pb-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                      <CardTitle className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
+                        <Shield className="w-4 h-4 text-emerald-500" /> Community Moderation
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0">
+                      <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
+                        {/* Staff Lounge */}
+                        <div className="p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
+                              <Lock className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-zinc-900 dark:text-white">#staff-only</h4>
+                              <p className="text-xs font-medium text-zinc-500 mt-0.5">Highly restricted • 3 active members</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="h-8 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900">Settings</Button>
+                            <Button variant="outline" size="sm" className="h-8 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white dark:bg-zinc-900">Purge Logs</Button>
+                          </div>
                         </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Leave Policy</Label>
-                          <Select defaultValue="standard">
-                            <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-card border-border">
-                              <SelectItem value="standard">Standard (20 days/yr)</SelectItem>
-                              <SelectItem value="extended">Extended (25 days/yr)</SelectItem>
-                              <SelectItem value="unlimited">Unlimited PTO</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Payroll Cycle</Label>
-                          <Select defaultValue="monthly">
-                            <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
-                            <SelectContent className="bg-card border-border">
-                              <SelectItem value="weekly">Weekly</SelectItem>
-                              <SelectItem value="biweekly">Bi-weekly</SelectItem>
-                              <SelectItem value="monthly">Monthly</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="space-y-2">
-                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Probation Period (Months)</Label>
-                          <Input type="number" defaultValue={moduleConfig.probationPeriod} className="bg-input border-border" />
+
+                        {/* General Lounge */}
+                        <div className="p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center shrink-0">
+                              <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
+                            </div>
+                            <div>
+                              <h4 className="text-sm font-bold text-zinc-900 dark:text-white">#general-discussion</h4>
+                              <p className="text-xs font-medium text-zinc-500 mt-0.5">Public • 42 posts today</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="h-8 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900">Settings</Button>
+                            <Button variant="outline" size="sm" className="h-8 border-amber-200 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 bg-white dark:bg-zinc-900">Lock Chat</Button>
+                          </div>
                         </div>
                       </div>
-                      <div className="flex justify-end">
-                        <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
-                          Save Configuration
-                        </Button>
-                      </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                </div>
 
-                    {/* Usage Metrics */}
-                    <div className="space-y-4">
-                      <div className="flex items-center gap-2 text-foreground">
-                        <TrendingUp className="w-5 h-5 text-emerald-500" />
-                        <h3 className="font-medium">Usage & Quota Metrics</h3>
+                {/* Right Col: Global Broadcast */}
+                <div className="space-y-6">
+                  <Card className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-400" />
+                    <CardHeader className="pb-4 bg-zinc-50/50 dark:bg-zinc-900/50 border-b border-zinc-100 dark:border-zinc-800/50">
+                      <CardTitle className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
+                        <Megaphone className="w-4 h-4 text-emerald-500" /> Global Broadcast
+                      </CardTitle>
+                      <CardDescription className="text-xs text-zinc-500">Push pinned alerts to all worker feeds.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-5">
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Alert Title</Label>
+                        <Input placeholder="e.g., System Maintenance" className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-sm h-10 shadow-sm" />
                       </div>
-                      <div className="grid grid-cols-4 gap-4">
-                        <div className="text-center p-4 rounded-lg bg-secondary/30">
-                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.activeUsers}</div>
-                          <p className="text-xs text-muted-foreground uppercase">Active Users</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-secondary/30">
-                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.storageUsed}</div>
-                          <p className="text-xs text-muted-foreground uppercase">Storage Used</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-secondary/30">
-                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.lastSync}</div>
-                          <p className="text-xs text-muted-foreground uppercase">Last Sync</p>
-                        </div>
-                        <div className="text-center p-4 rounded-lg bg-secondary/30">
-                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.uptime}</div>
-                          <p className="text-xs text-muted-foreground uppercase">Uptime</p>
-                        </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">Message Body</Label>
+                        <Textarea placeholder="Enter official announcement..." className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 text-sm resize-none min-h-[120px] shadow-sm" />
                       </div>
-                    </div>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            )}
-          </TabsContent>
-
-          {/* Workers Tab */}
-          <TabsContent value="workers" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">Worker Management</h2>
-                <p className="text-sm text-muted-foreground">Manage employee records and access permissions</p>
-              </div>
-              <Dialog open={isHireDialogOpen} onOpenChange={setIsHireDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
-                    <Plus className="w-4 h-4 mr-2" /> Onboard New Worker
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle className="text-foreground">Onboard New Worker</DialogTitle>
-                    <DialogDescription>Add a new employee to your institution</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Full Name</Label>
-                      <Input value={newWorker.name} onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })} className="bg-input border-border" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Email</Label>
-                      <Input type="email" value={newWorker.email} onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })} className="bg-input border-border" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Department</Label>
-                      <Select value={newWorker.department} onValueChange={(v) => setNewWorker({ ...newWorker, department: v })}>
-                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Select department" /></SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          {departments.map(dept => (<SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Role</Label>
-                      <Select value={newWorker.role} onValueChange={(v) => setNewWorker({ ...newWorker, role: v })}>
-                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Select role" /></SelectTrigger>
-                        <SelectContent className="bg-card border-border">
-                          {availableRoles.length === 0 ? (
-                            <SelectItem value="" disabled>No roles available</SelectItem>
-                          ) : (
-                            availableRoles.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))
-                          )}
-                        </SelectContent>
-                      </Select>
-                      <p className="text-xs text-muted-foreground">Only roles from active modules are available</p>
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsHireDialogOpen(false)} className="border-border">Cancel</Button>
-                    <Button onClick={handleHireWorker} className="bg-emerald-600 hover:bg-emerald-500 text-white" disabled={isHiring}>
-                       {isHiring ? <Loader2 className="w-4 h-4 animate-spin" /> : "Onboard Worker"}
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
-
-            <div className="border border-border rounded-lg overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-border hover:bg-transparent">
-                    <TableHead className="text-muted-foreground">Name</TableHead>
-                    <TableHead className="text-muted-foreground">Email</TableHead>
-                    <TableHead className="text-muted-foreground">Department</TableHead>
-                    <TableHead className="text-muted-foreground">Role</TableHead>
-                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {isLoading ? (
-                    <TableRow><TableCell colSpan={5} className="text-center py-6"><Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-500"/></TableCell></TableRow>
-                  ) : workers.map(worker => (
-                    <TableRow key={worker.id} className="border-border hover:bg-secondary/30 transition-colors">
-                      <TableCell className="text-foreground">
+                      <div className="flex items-center justify-between pt-2">
                         <div className="flex items-center gap-2">
-                          <Avatar className="w-8 h-8 bg-emerald-500/20 border border-emerald-500/30">
-                            <AvatarFallback className="text-emerald-500 text-xs">{worker.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                          </Avatar>
-                          {worker.name}
+                          <Pin className="w-4 h-4 text-emerald-500" />
+                          <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300">Pin to top of feeds</span>
                         </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{worker.email}</TableCell>
-                      <TableCell><Badge variant="outline" className="border-border">{worker.department}</Badge></TableCell>
-                      <TableCell><Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">{worker.role}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Pencil className="w-4 h-4" /></Button>
-                          <Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </TabsContent>
-
-          {/* Departments Tab */}
-          <TabsContent value="departments" className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-semibold text-foreground mb-2">Department Management</h2>
-                <p className="text-sm text-muted-foreground">Organize your institution&apos;s structure</p>
+                        <Switch defaultChecked className="data-[state=checked]:bg-emerald-500" />
+                      </div>
+                      <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold shadow-md mt-2 h-10">
+                        Push Broadcast
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-              <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
-                    <Plus className="w-4 h-4 mr-2" /> Add Department
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="bg-card border-border">
-                  <DialogHeader>
-                    <DialogTitle className="text-foreground">Create Department</DialogTitle>
-                    <DialogDescription>Add a new department to your institution</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground">Department Name</Label>
-                      <Input value={newDept} onChange={(e) => setNewDept(e.target.value)} className="bg-input border-border" />
-                    </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsDeptDialogOpen(false)} className="border-border">Cancel</Button>
-                    <Button onClick={handleAddDepartment} className="bg-emerald-600 hover:bg-emerald-500 text-white">Create Department</Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </div>
+            </TabsContent>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {departments.map(dept => (
-                <Card key={dept.id} className="bg-card border-border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10">
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-foreground text-base">{dept.name}</CardTitle>
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteDepartment(dept.id)} className="text-muted-foreground hover:text-destructive">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+            {/* TAB: DIRECTORY */}
+            <TabsContent value="workers" className="m-0 space-y-6 animate-in fade-in duration-300">
+              <Card className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
+                <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
+                  <Input placeholder="Search workers by name or email..." className="max-w-md w-full bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 h-10 text-sm shadow-sm" />
+                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm h-10 shrink-0 w-full sm:w-auto">
+                    <Plus className="w-4 h-4 mr-2" /> Onboard Worker
+                  </Button>
+                </div>
+                <Table>
+                  <TableHeader className="bg-zinc-50/80 dark:bg-zinc-950/50">
+                    <TableRow className="border-zinc-200 dark:border-zinc-800 hover:bg-transparent">
+                      <TableHead className="text-xs font-bold uppercase tracking-wider text-zinc-500 h-10">Employee</TableHead>
+                      <TableHead className="text-xs font-bold uppercase tracking-wider text-zinc-500 h-10">Department</TableHead>
+                      <TableHead className="text-xs font-bold uppercase tracking-wider text-zinc-500 h-10">System Role</TableHead>
+                      <TableHead className="text-xs font-bold uppercase tracking-wider text-zinc-500 h-10 text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {workers.length === 0 ? (
+                      <TableRow><TableCell colSpan={4} className="text-center py-12 text-zinc-500 text-sm">No workers found in directory.</TableCell></TableRow>
+                    ) : (
+                      workers.map(w => (
+                        <TableRow key={w.id} className="border-zinc-100 dark:border-zinc-800/50 hover:bg-zinc-50 dark:hover:bg-zinc-800/30">
+                          <TableCell className="py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="w-9 h-9 border border-zinc-200 dark:border-zinc-700 bg-white">
+                                <AvatarFallback className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 text-xs font-bold">{w.name.charAt(0)}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <p className="text-sm font-bold text-zinc-900 dark:text-white">{w.name}</p>
+                                <p className="text-[10px] text-zinc-500">{w.email}</p>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="py-3"><Badge variant="outline" className="border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900 font-semibold">{w.department}</Badge></TableCell>
+                          <TableCell className="py-3"><Badge className="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20 shadow-none hover:bg-emerald-100 font-semibold">{w.role}</Badge></TableCell>
+                          <TableCell className="py-3 text-right">
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"><Settings className="w-4 h-4" /></Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </Card>
+            </TabsContent>
+
+            {/* TAB: ERP MODULES */}
+            <TabsContent value="modules" className="m-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-300">
+              {modules.map(m => (
+                <Card key={m.id} className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group">
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 group-hover:border-emerald-500/50 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
+                        <Settings className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors" />
+                      </div>
+                      <Badge variant={m.status === 'active' ? 'default' : 'outline'} className={m.status === 'active' ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm' : 'text-zinc-500 dark:border-zinc-700 bg-white dark:bg-zinc-900'}>
+                        {m.status.toUpperCase()}
+                      </Badge>
+                    </div>
+                    <CardTitle className="text-lg font-bold text-zinc-900 dark:text-white">{m.name}</CardTitle>
+                    <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed line-clamp-2">{m.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm text-muted-foreground">
-                      {workers.filter(w => w.department === dept.name).length} workers
-                    </p>
+                    <Button className="w-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold h-10 shadow-sm transition-colors border border-zinc-200 dark:border-zinc-700" disabled={m.status !== 'active'}>
+                      Configure Policies
+                    </Button>
                   </CardContent>
                 </Card>
               ))}
-            </div>
-          </TabsContent>
+            </TabsContent>
+
+          </div>
         </Tabs>
       </main>
-
-      {/* Floating AI Chat Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button onClick={() => setChatOpen(!chatOpen)} className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 h-14 px-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/30">
-          <Sparkles className="w-5 h-5 mr-2" /> TIR AI Analyst
-        </Button>
-      </div>
     </div>
   );
 }
