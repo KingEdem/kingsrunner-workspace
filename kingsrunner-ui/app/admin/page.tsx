@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
-  Users, Building2, Lock, CheckCircle2, Clock, Plus, Pencil, Trash2, LogOut, Settings, TrendingUp, Heart, Truck, DollarSign, Sparkles, Loader2, Activity, Layers, Shield, Megaphone, MessageSquare, Pin, ArrowRight, Eye, AlertTriangle
+  Users, Building2, Lock, CheckCircle2, Clock, Plus, Pencil, Trash2, LogOut, Settings, TrendingUp, Heart, Truck, DollarSign, Sparkles, Loader2, Activity, Layers, Shield, Megaphone, MessageSquare, Pin, ArrowRight, Eye, AlertTriangle, Hash, Globe, FileText
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,16 @@ export default function AdminPage() {
   const [newWorker, setNewWorker] = useState({ name: '', email: '', department: '', role: '' });
   const [newDept, setNewDept] = useState('');
   const [chatOpen, setChatOpen] = useState(false);
+  const [isLoungeDialogOpen, setIsLoungeDialogOpen] = useState(false);
+  const [newLounge, setNewLounge] = useState({ name: '', description: '', isPrivate: false });
+  const [requestMessage, setRequestMessage] = useState('');
+  const [selectedModuleForRequest, setSelectedModuleForRequest] = useState<ERPModule | null>(null);
+
+  // Temporary Mock State until backend is connected
+  const [lounges, setLounges] = useState([
+    { id: '1', name: 'general-discussion', description: 'Public open forum.', isPrivate: false, memberCount: 42 },
+    { id: '2', name: 'staff-only', description: 'Highly restricted comms.', isPrivate: true, memberCount: 3 }
+  ]);
 
   // Backend State
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -185,6 +195,14 @@ export default function AdminPage() {
     toast.success(`Department "${dept.name}" created`);
   };
 
+  const handleCreateLounge = () => {
+    if (!newLounge.name) { toast.error('Please provide a lounge name'); return; }
+    setLounges([...lounges, { id: Date.now().toString(), name: newLounge.name.toLowerCase().replace(/\s+/g, '-'), description: newLounge.description, isPrivate: newLounge.isPrivate, memberCount: 1 }]);
+    setNewLounge({ name: '', description: '', isPrivate: false });
+    setIsLoungeDialogOpen(false);
+    toast.success(`Lounge #${newLounge.name} created successfully.`);
+  };
+
   const handleDeleteWorker = (id: string) => {
     setWorkers(workers.filter(w => w.id !== id));
     toast.success('Worker removed');
@@ -201,11 +219,19 @@ export default function AdminPage() {
     router.push('/');
   };
 
-  const handleApplyForAccess = (module: ERPModule) => {
+  const handleApplyForAccess = () => {
+    if (!selectedModuleForRequest) return;
+    if (!requestMessage.trim()) { toast.error("Please provide a business justification."); return; }
+
     const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
     if (isDevMock) {
-      setModules(modules.map(m => m.id === module.id ? { ...m, status: 'pending' as const } : m));
-      toast.success(`Access requested for ${module.name}`);
+      setModules(modules.map(m => m.id === selectedModuleForRequest.id ? { ...m, status: 'pending' as const } : m));
+      toast.success(`Access requested for ${selectedModuleForRequest.name}. Sent to Super Admin.`);
+      setSelectedModuleForRequest(null);
+      setRequestMessage('');
+    } else {
+      // TODO: Hook up to Spring Boot POST /api/tenant/modules/request
+      toast.info("Backend connection pending.");
     }
   };
 
@@ -271,27 +297,31 @@ export default function AdminPage() {
 
         {/* Raised Tile Stat Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-emerald-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"><Users className="w-5 h-5" /></div>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border-x border-t border-zinc-200 dark:border-zinc-800 border-b-[3px] border-b-emerald-500 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all group overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <CardContent className="p-5 flex items-center gap-4 relative z-10">
+              <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500 shadow-sm"><Users className="w-5 h-5" /></div>
               <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">{workers.length}</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Total Workers</p></div>
             </CardContent>
           </Card>
-          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-cyan-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-500"><Layers className="w-5 h-5" /></div>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border-x border-t border-zinc-200 dark:border-zinc-800 border-b-[3px] border-b-cyan-500 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all group overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-cyan-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <CardContent className="p-5 flex items-center gap-4 relative z-10">
+              <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-500 shadow-sm"><Layers className="w-5 h-5" /></div>
               <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">{modules.filter(m => m.status === 'active').length}</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Active Modules</p></div>
             </CardContent>
           </Card>
-          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-amber-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500"><MessageSquare className="w-5 h-5" /></div>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border-x border-t border-zinc-200 dark:border-zinc-800 border-b-[3px] border-b-amber-500 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all group overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-amber-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <CardContent className="p-5 flex items-center gap-4 relative z-10">
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 shadow-sm"><MessageSquare className="w-5 h-5" /></div>
               <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">4</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Active Lounges</p></div>
             </CardContent>
           </Card>
-          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 border-b-2 border-b-teal-500/50 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all">
-            <CardContent className="p-5 flex items-center gap-4">
-              <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-500"><Activity className="w-5 h-5" /></div>
+          <Card className="bg-white dark:bg-zinc-900/80 backdrop-blur-md border-x border-t border-zinc-200 dark:border-zinc-800 border-b-[3px] border-b-teal-500 shadow-md hover:shadow-lg hover:-translate-y-1 transition-all group overflow-hidden relative">
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent to-teal-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <CardContent className="p-5 flex items-center gap-4 relative z-10">
+              <div className="p-3 rounded-xl bg-teal-50 dark:bg-teal-500/10 text-teal-600 dark:text-teal-500 shadow-sm"><Activity className="w-5 h-5" /></div>
               <div><div className="text-3xl font-black text-zinc-900 dark:text-white leading-none">99%</div><p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">System Health</p></div>
             </CardContent>
           </Card>
@@ -325,46 +355,95 @@ export default function AdminPage() {
                 {/* Left Col: Lounge Moderation */}
                 <div className="xl:col-span-2 space-y-6">
                   <Card className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
-                    <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 pb-4 bg-zinc-50/50 dark:bg-zinc-900/50">
+                    <CardHeader className="border-b border-zinc-100 dark:border-zinc-800/50 pb-4 bg-zinc-50/50 dark:bg-zinc-900/50 flex flex-row items-center justify-between">
                       <CardTitle className="text-sm font-black uppercase tracking-wider text-zinc-900 dark:text-white flex items-center gap-2">
                         <Shield className="w-4 h-4 text-emerald-500" /> Community Moderation
                       </CardTitle>
+
+                      {/* Create Lounge Dialog */}
+                      <Dialog open={isLoungeDialogOpen} onOpenChange={setIsLoungeDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button size="sm" className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm h-8">
+                            <Plus className="w-4 h-4 mr-1.5" /> New Lounge
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white">Create Channel</DialogTitle>
+                            <DialogDescription className="text-zinc-500">Establish a new communication lounge for workers.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-5 py-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Lounge Name</Label>
+                              <div className="relative">
+                                <Hash className="absolute left-3 top-2.5 w-4 h-4 text-zinc-400" />
+                                <Input
+                                  placeholder="e.g., q3-planning"
+                                  value={newLounge.name}
+                                  onChange={e => setNewLounge({...newLounge, name: e.target.value})}
+                                  className="pl-9 bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500"
+                                />
+                              </div>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Description</Label>
+                              <Input
+                                placeholder="What is this channel for?"
+                                value={newLounge.description}
+                                onChange={e => setNewLounge({...newLounge, description: e.target.value})}
+                                className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500"
+                              />
+                            </div>
+                            <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                              <div className="space-y-0.5">
+                                <Label className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-2">
+                                  {newLounge.isPrivate ? <Lock className="w-4 h-4 text-amber-500"/> : <Globe className="w-4 h-4 text-emerald-500"/>}
+                                  Private Lounge
+                                </Label>
+                                <p className="text-xs text-zinc-500">{newLounge.isPrivate ? 'Only invited members can view/join.' : 'Anyone in the institution can join.'}</p>
+                              </div>
+                              <Switch
+                                checked={newLounge.isPrivate}
+                                onCheckedChange={checked => setNewLounge({...newLounge, isPrivate: checked})}
+                                className="data-[state=checked]:bg-amber-500"
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsLoungeDialogOpen(false)} className="border-zinc-200 dark:border-zinc-800">Cancel</Button>
+                            <Button onClick={handleCreateLounge} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Create Lounge</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
                     </CardHeader>
+
                     <CardContent className="p-0">
                       <div className="divide-y divide-zinc-100 dark:divide-zinc-800/50">
-                        {/* Staff Lounge */}
-                        <div className="p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 flex items-center justify-center shrink-0">
-                              <Lock className="w-5 h-5 text-amber-600 dark:text-amber-500" />
+                        {lounges.length === 0 ? (
+                           <div className="p-8 text-center text-zinc-500 text-sm">No lounges created yet.</div>
+                        ) : (
+                          lounges.map(lounge => (
+                            <div key={lounge.id} className="p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
+                              <div className="flex items-center gap-4">
+                                <div className={`w-10 h-10 rounded-lg border flex items-center justify-center shrink-0 ${lounge.isPrivate ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20' : 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20'}`}>
+                                  {lounge.isPrivate ? <Lock className="w-5 h-5 text-amber-600 dark:text-amber-500" /> : <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />}
+                                </div>
+                                <div>
+                                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">#{lounge.name}</h4>
+                                  <p className="text-xs font-medium text-zinc-500 mt-0.5">{lounge.isPrivate ? 'Highly restricted' : 'Public'} • {lounge.memberCount} active members</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button variant="outline" size="sm" onClick={() => toast.info(`Opening settings for #${lounge.name}`)} className="h-8 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900">Settings</Button>
+                                {lounge.isPrivate ? (
+                                  <Button variant="outline" size="sm" onClick={() => toast.error(`Purging logs for #${lounge.name}`)} className="h-8 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white dark:bg-zinc-900">Purge Logs</Button>
+                                ) : (
+                                  <Button variant="outline" size="sm" onClick={() => toast.warning(`Locking #${lounge.name}`)} className="h-8 border-amber-200 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 bg-white dark:bg-zinc-900">Lock Chat</Button>
+                                )}
+                              </div>
                             </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-zinc-900 dark:text-white">#staff-only</h4>
-                              <p className="text-xs font-medium text-zinc-500 mt-0.5">Highly restricted • 3 active members</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="h-8 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900">Settings</Button>
-                            <Button variant="outline" size="sm" className="h-8 border-red-200 dark:border-red-900/50 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 bg-white dark:bg-zinc-900">Purge Logs</Button>
-                          </div>
-                        </div>
-
-                        {/* General Lounge */}
-                        <div className="p-5 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-zinc-800/30 transition-colors">
-                          <div className="flex items-center gap-4">
-                            <div className="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 flex items-center justify-center shrink-0">
-                              <MessageSquare className="w-5 h-5 text-emerald-600 dark:text-emerald-500" />
-                            </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-zinc-900 dark:text-white">#general-discussion</h4>
-                              <p className="text-xs font-medium text-zinc-500 mt-0.5">Public • 42 posts today</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="h-8 border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 bg-white dark:bg-zinc-900">Settings</Button>
-                            <Button variant="outline" size="sm" className="h-8 border-amber-200 dark:border-amber-900/50 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 bg-white dark:bg-zinc-900">Lock Chat</Button>
-                          </div>
-                        </div>
+                          ))
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -410,9 +489,117 @@ export default function AdminPage() {
               <Card className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm overflow-hidden">
                 <div className="p-4 border-b border-zinc-100 dark:border-zinc-800/50 flex flex-col sm:flex-row gap-4 items-center justify-between bg-zinc-50/50 dark:bg-zinc-900/50">
                   <Input placeholder="Search workers by name or email..." className="max-w-md w-full bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 h-10 text-sm shadow-sm" />
-                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm h-10 shrink-0 w-full sm:w-auto">
-                    <Plus className="w-4 h-4 mr-2" /> Onboard Worker
-                  </Button>
+
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+
+                    {/* Add Department Dialog */}
+                    <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 bg-white dark:bg-zinc-900 shadow-sm h-10 shrink-0 w-full sm:w-auto hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                          <Plus className="w-4 h-4 mr-2" /> Add Department
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white">Create Department</DialogTitle>
+                          <DialogDescription className="text-zinc-500">Establish a new organizational unit.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-5 py-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Department Name</Label>
+                            <Input
+                              placeholder="e.g., Engineering"
+                              value={newDept}
+                              onChange={(e) => setNewDept(e.target.value)}
+                              className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500"
+                            />
+                          </div>
+                          <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg">
+                            <div className="space-y-0.5">
+                              <Label className="text-sm font-bold text-zinc-900 dark:text-white">Auto-create Lounge</Label>
+                              <p className="text-xs text-zinc-500">Generate a private community channel.</p>
+                            </div>
+                            <Switch defaultChecked className="data-[state=checked]:bg-emerald-500" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsDeptDialogOpen(false)} className="border-zinc-200 dark:border-zinc-800">Cancel</Button>
+                          <Button onClick={handleAddDepartment} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Create Department</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Onboard Worker Dialog */}
+                    <Dialog open={isHireDialogOpen} onOpenChange={setIsHireDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button className="bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm h-10 shrink-0 w-full sm:w-auto">
+                          <Plus className="w-4 h-4 mr-2" /> Onboard Worker
+                        </Button>
+                      </DialogTrigger>
+                      <DialogContent className="sm:max-w-[500px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
+                        <DialogHeader>
+                          <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white">Provision New Worker</DialogTitle>
+                          <DialogDescription className="text-zinc-500">Add an employee and assign ERP system access.</DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-5 py-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Full Name</Label>
+                              <Input placeholder="John Doe" value={newWorker.name} onChange={e => setNewWorker({...newWorker, name: e.target.value})} className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Email Address</Label>
+                              <Input type="email" placeholder="john@institution.edu" value={newWorker.email} onChange={e => setNewWorker({...newWorker, email: e.target.value})} className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800" />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">Department</Label>
+                              <Select value={newWorker.department} onValueChange={val => setNewWorker({...newWorker, department: val})}>
+                                <SelectTrigger className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                  <SelectValue placeholder="Select Dept" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+                                  {departments.map(d => (
+                                    <SelectItem key={d.id} value={d.name}>{d.name}</SelectItem>
+                                  ))}
+                                  {departments.length === 0 && <SelectItem value="general" disabled>No departments found</SelectItem>}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500">System Role</Label>
+                              <Select value={newWorker.role} onValueChange={val => setNewWorker({...newWorker, role: val})}>
+                                <SelectTrigger className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800">
+                                  <SelectValue placeholder="Select Role" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+                                  {availableRoles.map(role => (
+                                    <SelectItem key={role} value={role}>{role.replace('_', ' ')}</SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-zinc-800 rounded-lg mt-2">
+                            <div className="space-y-0.5">
+                              <Label className="text-sm font-bold text-zinc-900 dark:text-white">Send Welcome Email</Label>
+                              <p className="text-xs text-zinc-500">Includes secure temporary password.</p>
+                            </div>
+                            <Switch defaultChecked className="data-[state=checked]:bg-emerald-500" />
+                          </div>
+                        </div>
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => setIsHireDialogOpen(false)} className="border-zinc-200 dark:border-zinc-800">Cancel</Button>
+                          <Button onClick={handleHireWorker} disabled={isHiring} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">
+                            {isHiring ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null} Provision Worker
+                          </Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </div>
                 </div>
                 <Table>
                   <TableHeader className="bg-zinc-50/80 dark:bg-zinc-950/50">
@@ -456,23 +643,94 @@ export default function AdminPage() {
             {/* TAB: ERP MODULES */}
             <TabsContent value="modules" className="m-0 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 animate-in fade-in duration-300">
               {modules.map(m => (
-                <Card key={m.id} className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group">
-                  <CardHeader className="pb-4">
+                <Card key={m.id} className="bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 shadow-sm hover:shadow-md transition-all group flex flex-col">
+                  <CardHeader className="pb-4 flex-1">
                     <div className="flex justify-between items-start mb-3">
-                      <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl border border-zinc-100 dark:border-zinc-700 group-hover:border-emerald-500/50 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-500/10 transition-colors">
-                        <Settings className="w-5 h-5 text-zinc-600 dark:text-zinc-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-500 transition-colors" />
+                      <div className={`p-3 rounded-xl border transition-colors ${
+                        m.status === 'active' ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/20 text-emerald-600 dark:text-emerald-500' :
+                        m.status === 'pending' ? 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20 text-amber-600 dark:text-amber-500' :
+                        'bg-zinc-50 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-zinc-400'
+                      }`}>
+                        <Layers className="w-5 h-5" />
                       </div>
-                      <Badge variant={m.status === 'active' ? 'default' : 'outline'} className={m.status === 'active' ? 'bg-emerald-500 text-white hover:bg-emerald-600 shadow-sm' : 'text-zinc-500 dark:border-zinc-700 bg-white dark:bg-zinc-900'}>
+                      <Badge variant={m.status === 'active' ? 'default' : 'outline'} className={
+                        m.status === 'active' ? 'bg-emerald-500 text-white shadow-sm' :
+                        m.status === 'pending' ? 'text-amber-500 border-amber-500/50 bg-amber-50 dark:bg-amber-500/10' :
+                        'text-zinc-500 dark:border-zinc-700 bg-white dark:bg-zinc-900'
+                      }>
                         {m.status.toUpperCase()}
                       </Badge>
                     </div>
                     <CardTitle className="text-lg font-bold text-zinc-900 dark:text-white">{m.name}</CardTitle>
                     <CardDescription className="text-xs text-zinc-500 dark:text-zinc-400 mt-1.5 leading-relaxed line-clamp-2">{m.description}</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <Button className="w-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold h-10 shadow-sm transition-colors border border-zinc-200 dark:border-zinc-700" disabled={m.status !== 'active'}>
-                      Configure Policies
-                    </Button>
+
+                  <CardContent className="shrink-0 pt-0">
+                    {m.status === 'active' && (
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <Button className="w-full bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-900 dark:text-white font-bold h-10 shadow-sm transition-colors border border-zinc-200 dark:border-zinc-700">
+                            Configure Policies
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-black">{m.name} Settings</DialogTitle>
+                            <DialogDescription>Manage global institution policies for this module.</DialogDescription>
+                          </DialogHeader>
+                          <div className="py-6 text-center text-sm text-zinc-500">
+                            <Settings className="w-8 h-8 text-zinc-300 dark:text-zinc-700 mx-auto mb-3 animate-[spin_3s_linear_infinite]" />
+                            Configuration panels will be available once the {m.name} backend service is fully deployed.
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" className="w-full border-zinc-200 dark:border-zinc-800">Close</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {m.status === 'locked' && (
+                      <Dialog open={selectedModuleForRequest?.id === m.id} onOpenChange={(open) => !open ? setSelectedModuleForRequest(null) : setSelectedModuleForRequest(m)}>
+                        <DialogTrigger asChild>
+                          <Button className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold h-10 shadow-sm">
+                            Request Access
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800 shadow-2xl">
+                          <DialogHeader>
+                            <DialogTitle className="text-xl font-black text-zinc-900 dark:text-white">Unlock {m.name}</DialogTitle>
+                            <DialogDescription className="text-zinc-500">Submit a business justification to the Super Admin.</DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 p-3 rounded-lg flex items-start gap-3">
+                              <Shield className="w-4 h-4 text-emerald-600 dark:text-emerald-500 mt-0.5 shrink-0" />
+                              <p className="text-xs text-emerald-800 dark:text-emerald-400 font-medium">This module requires elevated provisioning. Access is typically granted within 24 hours.</p>
+                            </div>
+                            <div className="space-y-2">
+                              <Label className="text-xs font-bold uppercase tracking-widest text-zinc-500 flex items-center gap-2">
+                                <FileText className="w-3 h-3" /> Business Justification
+                              </Label>
+                              <Textarea
+                                placeholder="Explain why your institution needs this module (e.g., 'We just acquired 5 new buses...')"
+                                value={requestMessage}
+                                onChange={e => setRequestMessage(e.target.value)}
+                                className="bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 focus-visible:ring-emerald-500 resize-none min-h-[100px]"
+                              />
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => setSelectedModuleForRequest(null)} className="border-zinc-200 dark:border-zinc-800">Cancel</Button>
+                            <Button onClick={handleApplyForAccess} className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold">Submit Request</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+
+                    {m.status === 'pending' && (
+                      <Button disabled className="w-full bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500 font-bold h-10 border border-amber-200 dark:border-amber-500/20 opacity-100">
+                        <Clock className="w-4 h-4 mr-2" /> Request Pending
+                      </Button>
+                    )}
                   </CardContent>
                 </Card>
               ))}
