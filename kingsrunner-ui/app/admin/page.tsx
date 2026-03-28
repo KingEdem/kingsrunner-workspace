@@ -1,441 +1,626 @@
-"use client";
+'use client';
 
-import React, { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, UserPlus, Building2, Megaphone } from "lucide-react";
-import { toast } from "sonner";
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import {
+  Users, Building2, Lock, CheckCircle2, Clock, Plus, Pencil, Trash2, LogOut, Settings, TrendingUp, Heart, Truck, DollarSign, Sparkles, Loader2
+} from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import { TIRLogo } from '@/components/tir-logo';
+import { ThemeToggle } from '@/components/theme-toggle';
+import {
+  erpModules,
+  getAvailableRoles,
+  moduleConfig,
+  usageMetrics,
+  type ERPModule,
+  type Department,
+  type User,
+  isDevMockEnabled
+} from '@/lib/mock-data';
+import { toast } from 'sonner';
 
-interface Worker {
-  id: number;
-  fullName: string;
-  email: string;
-  role: string;
-  departmentName: string;
-}
+export default function AdminPage() {
+  const router = useRouter();
 
-interface Department {
-  id: number;
-  name: string;
-  description: string;
-}
+  // UI State
+  const [modules, setModules] = useState<ERPModule[]>(erpModules);
+  const [selectedModule, setSelectedModule] = useState<ERPModule | null>(null);
+  const [isHireDialogOpen, setIsHireDialogOpen] = useState(false);
+  const [isDeptDialogOpen, setIsDeptDialogOpen] = useState(false);
+  const [newWorker, setNewWorker] = useState({ name: '', email: '', department: '', role: '' });
+  const [newDept, setNewDept] = useState('');
+  const [chatOpen, setChatOpen] = useState(false);
 
-const MOCK_WORKERS: Worker[] = [
-  { id: 1, fullName: "Sarah Chen", email: "sarah.chen@institution.edu", role: "WORKER", departmentName: "Engineering" },
-  { id: 2, fullName: "Marcus Rodriguez", email: "marcus.r@institution.edu", role: "WORKER", departmentName: "Product" },
-  { id: 3, fullName: "Emily Watson", email: "emily.w@institution.edu", role: "WORKER", departmentName: "Design" },
-  { id: 4, fullName: "James O'Brien", email: "james.o@institution.edu", role: "WORKER", departmentName: "Engineering" },
-  { id: 5, fullName: "Priya Patel", email: "priya.p@institution.edu", role: "WORKER", departmentName: "Analytics" },
-];
-
-const MOCK_DEPARTMENTS: Department[] = [
-  { id: 1, name: "Engineering", description: "Software development and technical operations" },
-  { id: 2, name: "Product", description: "Product management and strategy" },
-  { id: 3, name: "Design", description: "UI/UX and creative design" },
-  { id: 4, name: "Analytics", description: "Data analysis and business intelligence" },
-  { id: 5, name: "Marketing", description: "Marketing and communications" },
-];
-
-export default function InstitutionAdmin() {
-  const [workers, setWorkers] = useState<Worker[]>([]);
+  // Backend State
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [workers, setWorkers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isHiring, setIsHiring] = useState(false);
-  const [isPublishing, setIsPublishing] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [isAuthorized, setIsAuthorized] = useState(false);
 
-  // Hire Worker Form
-  const [hireDialogOpen, setHireDialogOpen] = useState(false);
-  const [newWorkerName, setNewWorkerName] = useState("");
-  const [newWorkerEmail, setNewWorkerEmail] = useState("");
-  const [newWorkerDepartment, setNewWorkerDepartment] = useState("");
-
-  // Announcement Form
-  const [announcementTitle, setAnnouncementTitle] = useState("");
-  const [announcementContent, setAnnouncementContent] = useState("");
-  const [announcementHighPriority, setAnnouncementHighPriority] = useState(false);
-
-  const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
+  const availableRoles = getAvailableRoles(modules);
 
   useEffect(() => {
-    fetchWorkers();
-    fetchDepartments();
-  }, []);
+    if (typeof window !== "undefined") {
+      const userJson = localStorage.getItem('kingsrunner_user');
+      const jwt = localStorage.getItem('kingsrunner_jwt');
 
-  const fetchWorkers = async () => {
-    if (isDevMock) {
-      setTimeout(() => {
-        setWorkers(MOCK_WORKERS);
-        setIsLoading(false);
-      }, 300);
-      return;
+      console.log("Checking Auth...", { hasUser: !!userJson, hasJwt: !!jwt });
+
+      if (!userJson || !jwt) {
+        router.push('/');
+        return;
+      }
+
+      try {
+        const user = JSON.parse(userJson);
+        console.log("User Role found:", user.role);
+
+        // Strict check based on Role.java: SUPER_ADMIN or INSTITUTION_ADMIN
+        if (user.role === "INSTITUTION_ADMIN" || user.role === "SUPER_ADMIN") {
+          setIsAuthorized(true);
+          fetchDepartments();
+          fetchWorkers();
+        } else {
+          console.warn("Unauthorized Role:", user.role);
+          router.push('/hub');
+        }
+      } catch (e) {
+        console.error("Auth Parse Error:", e);
+        router.push('/');
+      }
     }
+  }, [router]);
 
-    try {
-      const jwt = localStorage.getItem("kingsrunner_jwt");
-      const response = await fetch("http://localhost:8080/api/tenant/workers", {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
-      if (!response.ok) throw new Error("Failed to fetch workers");
-      const data = await response.json();
-      setWorkers(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // --- SPRING BOOT API CALLS ---
   const fetchDepartments = async () => {
-    if (isDevMock) {
-      setTimeout(() => setDepartments(MOCK_DEPARTMENTS), 300);
-      return;
-    }
-
+    const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
+    if (isDevMock) return;
     try {
       const jwt = localStorage.getItem("kingsrunner_jwt");
       const response = await fetch("http://localhost:8080/api/tenant/departments", {
         headers: { Authorization: `Bearer ${jwt}` },
       });
-      if (!response.ok) throw new Error("Failed to fetch departments");
-      const data = await response.json();
-      setDepartments(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    }
+      if (response.ok) {
+        const data = await response.json();
+        // Adapt backend Department to UI Department
+        const adaptedDepts: Department[] = data.map((d: any) => ({
+          id: d.id.toString(),
+          name: d.name,
+          workerCount: 0 // Will be calculated in UI
+        }));
+        setDepartments(adaptedDepts);
+      }
+    } catch (err) { console.error(err); }
   };
 
-  const handleHireWorker = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsHiring(true);
+  const fetchWorkers = async () => {
+    const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
+    if (isDevMock) return;
+    try {
+      const jwt = localStorage.getItem("kingsrunner_jwt");
+      const response = await fetch("http://localhost:8080/api/tenant/workers", {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        // Adapt backend Worker to UI User
+        const adaptedWorkers: User[] = data.map((w: any) => ({
+          id: w.id.toString(),
+          name: w.fullName,
+          email: w.email,
+          department: w.departmentName,
+          role: w.role,
+          createdAt: new Date().toISOString()
+        }));
+        setWorkers(adaptedWorkers);
+      }
+    } catch (err) { console.error(err); }
+    finally { setIsLoading(false); }
+  };
 
-    if (isDevMock) {
-      setTimeout(() => {
-        const newWorker: Worker = {
-          id: Date.now(),
-          fullName: newWorkerName,
-          email: newWorkerEmail,
-          role: "WORKER",
-          departmentName: newWorkerDepartment,
-        };
-        setWorkers([...workers, newWorker]);
-        setHireDialogOpen(false);
-        setNewWorkerName("");
-        setNewWorkerEmail("");
-        setNewWorkerDepartment("");
-        setIsHiring(false);
-        toast.success("Worker hired successfully", {
-          description: `${newWorkerName} has been added to ${newWorkerDepartment}`,
-        });
-      }, 500);
+  const handleHireWorker = async () => {
+    if (!newWorker.name || !newWorker.email || !newWorker.department || !newWorker.role) {
+      toast.error('Please fill all fields');
       return;
     }
+
+    setIsHiring(true);
+    const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
+    if (isDevMock) return; // Skip actual fetch if mock is forced
 
     try {
       const jwt = localStorage.getItem("kingsrunner_jwt");
       const response = await fetch("http://localhost:8080/api/tenant/workers", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${jwt}` },
         body: JSON.stringify({
-          fullName: newWorkerName,
-          email: newWorkerEmail,
-          departmentName: newWorkerDepartment,
+          fullName: newWorker.name,
+          email: newWorker.email,
+          departmentName: newWorker.department,
         }),
       });
       if (!response.ok) throw new Error("Failed to hire worker");
-      await fetchWorkers();
-      setHireDialogOpen(false);
-      setNewWorkerName("");
-      setNewWorkerEmail("");
-      setNewWorkerDepartment("");
-      toast.success("Worker hired successfully", {
-        description: `${newWorkerName} has been added to the team`,
-      });
+
+      await fetchWorkers(); // Refresh the list from the backend
+      setNewWorker({ name: '', email: '', department: '', role: '' });
+      setIsHireDialogOpen(false);
+      toast.success(`${newWorker.name} has been onboarded`);
     } catch (err) {
-      toast.error("Error", {
-        description: err instanceof Error ? err.message : "Failed to hire worker",
-      });
+      toast.error("Failed to onboard worker");
     } finally {
       setIsHiring(false);
     }
   };
 
-  const handlePublishAnnouncement = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsPublishing(true);
-
-    if (isDevMock) {
-      setTimeout(() => {
-        setAnnouncementTitle("");
-        setAnnouncementContent("");
-        setAnnouncementHighPriority(false);
-        setIsPublishing(false);
-        toast.success("Announcement published", {
-          description: "Your announcement has been shared with the team",
-        });
-      }, 500);
+  const handleAddDepartment = () => {
+    if (!newDept.trim()) {
+      toast.error('Please enter a department name');
       return;
     }
+    // Note: If you have a Spring Boot endpoint for creating departments, it goes here.
+    // For now, keeping your original UI state logic so it doesn't crash.
+    const dept: Department = { id: Date.now().toString(), name: newDept, workerCount: 0 };
+    setDepartments([...departments, dept]);
+    setNewDept('');
+    setIsDeptDialogOpen(false);
+    toast.success(`Department "${dept.name}" created`);
+  };
 
-    try {
-      const jwt = localStorage.getItem("kingsrunner_jwt");
-      const response = await fetch("http://localhost:8080/api/tenant/workspace/announcements", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${jwt}`,
-        },
-        body: JSON.stringify({
-          title: announcementTitle,
-          content: announcementContent,
-          priority: announcementHighPriority ? "HIGH" : "MEDIUM",
-        }),
-      });
-      if (!response.ok) throw new Error("Failed to publish announcement");
-      setAnnouncementTitle("");
-      setAnnouncementContent("");
-      setAnnouncementHighPriority(false);
-      toast.success("Announcement published", {
-        description: "Your announcement has been shared with the team",
-      });
-    } catch (err) {
-      toast.error("Error", {
-        description: err instanceof Error ? err.message : "Failed to publish announcement",
-      });
-    } finally {
-      setIsPublishing(false);
+  const handleDeleteWorker = (id: string) => {
+    setWorkers(workers.filter(w => w.id !== id));
+    toast.success('Worker removed');
+  };
+
+  const handleDeleteDepartment = (id: string) => {
+    setDepartments(departments.filter(d => d.id !== id));
+    toast.success('Department removed');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('kingsrunner_jwt');
+    localStorage.removeItem('kingsrunner_user');
+    router.push('/');
+  };
+
+  const handleApplyForAccess = (module: ERPModule) => {
+    const isDevMock = typeof window !== "undefined" && localStorage.getItem("kingsrunner_dev_mock") === "true";
+    if (isDevMock) {
+      setModules(modules.map(m => m.id === module.id ? { ...m, status: 'pending' as const } : m));
+      toast.success(`Access requested for ${module.name}`);
     }
   };
 
-  if (error) {
+  const getModuleIcon = (iconName: string) => {
+    const icons: Record<string, React.ReactNode> = {
+      lock: <Lock className="w-5 h-5" />, users: <Users className="w-5 h-5" />,
+      truck: <Truck className="w-5 h-5" />, heart: <Heart className="w-5 h-5" />,
+      building: <Building2 className="w-5 h-5" />, dollar: <DollarSign className="w-5 h-5" />
+    };
+    return icons[iconName] || <Building2 className="w-5 h-5" />;
+  };
+
+  const getStatusBadge = (status: ERPModule['status']) => {
+    switch (status) {
+      case 'active': return (<Badge className="bg-emerald-500 text-white border-emerald-600"><CheckCircle2 className="w-3 h-3 mr-1" /> Active</Badge>);
+      case 'pending': return (<Badge className="bg-orange-500 text-white border-orange-600"><Clock className="w-3 h-3 mr-1" /> Pending Approval</Badge>);
+      case 'locked': return (<Badge variant="outline" className="text-muted-foreground border-muted-foreground/30 bg-muted/30"><Lock className="w-3 h-3 mr-1" /> Locked</Badge>);
+    }
+  };
+
+  const stats = [
+    { label: 'Total Workers', value: workers.length },
+    { label: 'ERP Modules', value: modules.filter(m => m.status === 'active').length },
+    { label: 'Admins', value: 1 },
+    { label: 'Staff', value: Math.max(0, workers.length - 1) }
+  ];
+
+  if (!isAuthorized) {
     return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
-        <Card className="bg-zinc-900/50 border-zinc-800">
-          <CardHeader>
-            <CardTitle className="text-red-500">Error</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-zinc-300">{error}</p>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="flex flex-col items-center gap-2">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-600" />
+          <p className="text-sm text-muted-foreground">Verifying Security...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-zinc-950 p-6">
-      <div className="max-w-7xl mx-auto">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold text-zinc-50 mb-2">Institution Admin</h1>
-          <p className="text-zinc-400">Manage your organization and communications</p>
-        </header>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
+        <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <TIRLogo size="sm" />
+            <span className="text-2xl font-black tracking-tighter bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent hidden sm:inline">Institution Admin</span>
+          </div>
 
-        <Tabs defaultValue="organization" className="space-y-6">
-          <TabsList className="bg-zinc-900/50 border border-zinc-800">
-            <TabsTrigger value="organization" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              <Building2 className="w-4 h-4 mr-2" />
-              Organization
-            </TabsTrigger>
-            <TabsTrigger value="communications" className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white">
-              <Megaphone className="w-4 h-4 mr-2" />
-              Communications
-            </TabsTrigger>
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <Button variant="ghost" size="sm" className="text-muted-foreground">
+              <Settings className="w-4 h-4 mr-2" /> Settings
+            </Button>
+            <Avatar className="w-9 h-9 bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 transition-all cursor-pointer">
+              <AvatarFallback className="text-emerald-500 text-sm">IA</AvatarFallback>
+            </Avatar>
+            <Button variant="ghost" size="icon" onClick={handleLogout} className="text-muted-foreground hover:text-foreground" title="Logout">
+              <LogOut className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto px-4 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+          {stats.map((stat, i) => (
+            <Card key={i} className="bg-card border-border hover-lift transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/10">
+              <CardContent className="pt-6">
+                <div className="text-3xl font-bold text-foreground">{stat.value}</div>
+                <p className="text-sm text-emerald-500">{stat.label}</p>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+
+        <Tabs defaultValue="modules" className="space-y-6">
+          <TabsList className="bg-secondary/50">
+            <TabsTrigger value="modules" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">ERP Modules</TabsTrigger>
+            <TabsTrigger value="workers" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Workers</TabsTrigger>
+            <TabsTrigger value="departments" className="data-[state=active]:bg-emerald-500 data-[state=active]:text-white">Departments</TabsTrigger>
           </TabsList>
 
-          {/* Organization Tab */}
-          <TabsContent value="organization" className="space-y-6">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Workers Table */}
-              <Card className="bg-zinc-900/50 border-zinc-800 lg:col-span-2">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="text-zinc-50">Workers</CardTitle>
-                      <CardDescription className="text-zinc-400">Manage your team members</CardDescription>
+          {/* ERP Modules Tab */}
+          <TabsContent value="modules" className="space-y-6">
+            <div>
+              <h2 className="text-xl font-semibold text-foreground mb-2">Platform ERP Modules</h2>
+              <p className="text-sm text-muted-foreground">
+                {modules.filter(m => m.status === 'active').length} of {modules.length} modules active for this institution
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {modules.map(module => (
+                <Card
+                  key={module.id}
+                  className={`bg-card border-border relative transition-all duration-300 hover:-translate-y-1 hover:shadow-lg ${
+                    module.status === 'active'
+                      ? 'border-emerald-500/50 shadow-emerald-500/20 hover:shadow-emerald-500/30'
+                      : module.status === 'pending'
+                        ? 'border-orange-500/30 hover:shadow-orange-500/20'
+                        : 'hover:shadow-muted/20'
+                  }`}
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start justify-between">
+                      <div className={`p-2 rounded-lg ${
+                        module.status === 'active' ? 'bg-emerald-500/20 text-emerald-500' :
+                        module.status === 'pending' ? 'bg-orange-500/20 text-orange-500' : 'bg-secondary text-muted-foreground'
+                      }`}>
+                        {getModuleIcon(module.icon)}
+                      </div>
+                      {getStatusBadge(module.status)}
                     </div>
-                    <Dialog open={hireDialogOpen} onOpenChange={setHireDialogOpen}>
-                      <DialogTrigger asChild>
-                        <Button className="bg-emerald-600 hover:bg-emerald-500">
-                          <UserPlus className="w-4 h-4 mr-2" />
-                          Hire Worker
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-zinc-900 border-zinc-800">
-                        <form onSubmit={handleHireWorker}>
-                          <DialogHeader>
-                            <DialogTitle className="text-zinc-50">Hire New Worker</DialogTitle>
-                            <DialogDescription className="text-zinc-400">Add a new team member to your institution</DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 py-4">
-                            <div className="space-y-2">
-                              <Label htmlFor="name" className="text-zinc-300">Full Name</Label>
-                              <Input
-                                id="name"
-                                placeholder="Jane Doe"
-                                value={newWorkerName}
-                                onChange={(e) => setNewWorkerName(e.target.value)}
-                                className="bg-zinc-950/50 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500"
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="email" className="text-zinc-300">Email</Label>
-                              <Input
-                                id="email"
-                                type="email"
-                                placeholder="jane.doe@institution.edu"
-                                value={newWorkerEmail}
-                                onChange={(e) => setNewWorkerEmail(e.target.value)}
-                                className="bg-zinc-950/50 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500"
-                                required
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <Label htmlFor="department" className="text-zinc-300">Department</Label>
-                              <Input
-                                id="department"
-                                placeholder="Engineering"
-                                value={newWorkerDepartment}
-                                onChange={(e) => setNewWorkerDepartment(e.target.value)}
-                                className="bg-zinc-950/50 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500"
-                                required
-                              />
-                            </div>
-                          </div>
-                          <DialogFooter>
-                            <Button type="submit" className="bg-emerald-600 hover:bg-emerald-500" disabled={isHiring}>
-                              {isHiring ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                              Hire Worker
-                            </Button>
-                          </DialogFooter>
-                        </form>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="flex justify-center py-8">
-                      <Loader2 className="w-6 h-6 animate-spin text-emerald-500" />
-                    </div>
-                  ) : (
-                    <div className="rounded-md border border-zinc-800">
+                    <CardTitle className="text-foreground mt-3">{module.name}</CardTitle>
+                    <CardDescription>{module.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {module.status === 'active' ? (
+                      <Button onClick={() => setSelectedModule(module)} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:shadow-lg hover:shadow-emerald-500/20">
+                        Manage Module
+                      </Button>
+                    ) : module.status === 'pending' ? (
+                      <Button disabled className="w-full bg-orange-500/30 text-orange-300 border border-orange-500/50">
+                        Pending Approval
+                      </Button>
+                    ) : (
+                      <Button variant="outline" onClick={() => handleApplyForAccess(module)} className="w-full border-border text-muted-foreground hover:text-foreground hover:border-emerald-500/50 transition-all duration-300">
+                        <Lock className="w-4 h-4 mr-2" /> Apply for Access
+                      </Button>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {/* Module Management Dialog */}
+            {selectedModule && (
+              <Dialog open={!!selectedModule} onOpenChange={() => setSelectedModule(null)}>
+                <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto terminal-scrollbar">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground flex items-center gap-2">
+                      <Users className="w-5 h-5 text-emerald-500" />
+                      {selectedModule.name}
+                    </DialogTitle>
+                    <DialogDescription>Grant or revoke worker access to this module. Changes take effect immediately.</DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-6">
+                    {/* Worker Access Table */}
+                    <div className="border border-border rounded-lg overflow-hidden">
                       <Table>
                         <TableHeader>
-                          <TableRow className="border-zinc-800 hover:bg-zinc-800/50">
-                            <TableHead className="text-zinc-400">Name</TableHead>
-                            <TableHead className="text-zinc-400">Email</TableHead>
-                            <TableHead className="text-zinc-400">Role</TableHead>
-                            <TableHead className="text-zinc-400">Department</TableHead>
+                          <TableRow className="border-border hover:bg-transparent">
+                            <TableHead className="text-muted-foreground">Departments</TableHead>
+                            <TableHead className="text-muted-foreground">Worker</TableHead>
+                            <TableHead className="text-muted-foreground">Email</TableHead>
+                            <TableHead className="text-muted-foreground">Access</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {workers.map((worker) => (
-                            <TableRow key={worker.id} className="border-zinc-800 hover:bg-zinc-800/50">
-                              <TableCell className="text-zinc-100 font-medium">{worker.fullName}</TableCell>
-                              <TableCell className="text-zinc-400">{worker.email}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="bg-emerald-600/20 text-emerald-400 border-emerald-600/50">
-                                  {worker.role}
-                                </Badge>
+                          {workers.slice(0, 3).map((worker) => (
+                            <TableRow key={worker.id} className="border-border">
+                              <TableCell><Badge className="bg-emerald-500 text-white">{worker.department}</Badge></TableCell>
+                              <TableCell className="text-foreground">
+                                <div className="flex items-center gap-2">
+                                  <Avatar className="w-6 h-6 bg-emerald-500/20 border border-emerald-500/30">
+                                    <AvatarFallback className="text-emerald-500 text-xs">{worker.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                  </Avatar>
+                                  {worker.name}
+                                </div>
                               </TableCell>
-                              <TableCell className="text-zinc-400">{worker.departmentName}</TableCell>
+                              <TableCell className="text-muted-foreground">{worker.email}</TableCell>
+                              <TableCell><Switch defaultChecked className="data-[state=checked]:bg-emerald-500" /></TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
                       </Table>
                     </div>
-                  )}
-                </CardContent>
-              </Card>
 
-              {/* Departments List */}
-              <Card className="bg-zinc-900/50 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="text-zinc-50">Departments</CardTitle>
-                  <CardDescription className="text-zinc-400">Active departments</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {departments.map((dept) => (
-                      <Card key={dept.id} className="bg-zinc-950/50 border-zinc-800/50">
-                        <CardHeader className="pb-3">
-                          <CardTitle className="text-sm text-zinc-100">{dept.name}</CardTitle>
-                          <CardDescription className="text-xs text-zinc-400">{dept.description}</CardDescription>
-                        </CardHeader>
-                      </Card>
-                    ))}
+                    {/* Module Configuration */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-foreground">
+                        <Settings className="w-5 h-5 text-emerald-500" />
+                        <h3 className="font-medium">Module Configuration</h3>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Tenant-level settings for {selectedModule.name}.</p>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Default Working Hours / Week</Label>
+                          <Input type="number" defaultValue={moduleConfig.defaultWorkingHours} className="bg-input border-border" />
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Leave Policy</Label>
+                          <Select defaultValue="standard">
+                            <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-card border-border">
+                              <SelectItem value="standard">Standard (20 days/yr)</SelectItem>
+                              <SelectItem value="extended">Extended (25 days/yr)</SelectItem>
+                              <SelectItem value="unlimited">Unlimited PTO</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Payroll Cycle</Label>
+                          <Select defaultValue="monthly">
+                            <SelectTrigger className="bg-input border-border"><SelectValue /></SelectTrigger>
+                            <SelectContent className="bg-card border-border">
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="biweekly">Bi-weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Probation Period (Months)</Label>
+                          <Input type="number" defaultValue={moduleConfig.probationPeriod} className="bg-input border-border" />
+                        </div>
+                      </div>
+                      <div className="flex justify-end">
+                        <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
+                          Save Configuration
+                        </Button>
+                      </div>
+                    </div>
+
+                    {/* Usage Metrics */}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 text-foreground">
+                        <TrendingUp className="w-5 h-5 text-emerald-500" />
+                        <h3 className="font-medium">Usage & Quota Metrics</h3>
+                      </div>
+                      <div className="grid grid-cols-4 gap-4">
+                        <div className="text-center p-4 rounded-lg bg-secondary/30">
+                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.activeUsers}</div>
+                          <p className="text-xs text-muted-foreground uppercase">Active Users</p>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-secondary/30">
+                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.storageUsed}</div>
+                          <p className="text-xs text-muted-foreground uppercase">Storage Used</p>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-secondary/30">
+                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.lastSync}</div>
+                          <p className="text-xs text-muted-foreground uppercase">Last Sync</p>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-secondary/30">
+                          <div className="text-2xl font-bold text-emerald-500">{usageMetrics.uptime}</div>
+                          <p className="text-xs text-muted-foreground uppercase">Uptime</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
+                </DialogContent>
+              </Dialog>
+            )}
+          </TabsContent>
+
+          {/* Workers Tab */}
+          <TabsContent value="workers" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-foreground mb-2">Worker Management</h2>
+                <p className="text-sm text-muted-foreground">Manage employee records and access permissions</p>
+              </div>
+              <Dialog open={isHireDialogOpen} onOpenChange={setIsHireDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
+                    <Plus className="w-4 h-4 mr-2" /> Onboard New Worker
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Onboard New Worker</DialogTitle>
+                    <DialogDescription>Add a new employee to your institution</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Full Name</Label>
+                      <Input value={newWorker.name} onChange={(e) => setNewWorker({ ...newWorker, name: e.target.value })} className="bg-input border-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Email</Label>
+                      <Input type="email" value={newWorker.email} onChange={(e) => setNewWorker({ ...newWorker, email: e.target.value })} className="bg-input border-border" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Department</Label>
+                      <Select value={newWorker.department} onValueChange={(v) => setNewWorker({ ...newWorker, department: v })}>
+                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Select department" /></SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          {departments.map(dept => (<SelectItem key={dept.id} value={dept.name}>{dept.name}</SelectItem>))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Role</Label>
+                      <Select value={newWorker.role} onValueChange={(v) => setNewWorker({ ...newWorker, role: v })}>
+                        <SelectTrigger className="bg-input border-border"><SelectValue placeholder="Select role" /></SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                          {availableRoles.length === 0 ? (
+                            <SelectItem value="" disabled>No roles available</SelectItem>
+                          ) : (
+                            availableRoles.map(role => (<SelectItem key={role} value={role}>{role}</SelectItem>))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">Only roles from active modules are available</p>
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsHireDialogOpen(false)} className="border-border">Cancel</Button>
+                    <Button onClick={handleHireWorker} className="bg-emerald-600 hover:bg-emerald-500 text-white" disabled={isHiring}>
+                       {isHiring ? <Loader2 className="w-4 h-4 animate-spin" /> : "Onboard Worker"}
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="border border-border rounded-lg overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="border-border hover:bg-transparent">
+                    <TableHead className="text-muted-foreground">Name</TableHead>
+                    <TableHead className="text-muted-foreground">Email</TableHead>
+                    <TableHead className="text-muted-foreground">Department</TableHead>
+                    <TableHead className="text-muted-foreground">Role</TableHead>
+                    <TableHead className="text-muted-foreground text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {isLoading ? (
+                    <TableRow><TableCell colSpan={5} className="text-center py-6"><Loader2 className="w-6 h-6 animate-spin mx-auto text-emerald-500"/></TableCell></TableRow>
+                  ) : workers.map(worker => (
+                    <TableRow key={worker.id} className="border-border hover:bg-secondary/30 transition-colors">
+                      <TableCell className="text-foreground">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="w-8 h-8 bg-emerald-500/20 border border-emerald-500/30">
+                            <AvatarFallback className="text-emerald-500 text-xs">{worker.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                          </Avatar>
+                          {worker.name}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{worker.email}</TableCell>
+                      <TableCell><Badge variant="outline" className="border-border">{worker.department}</Badge></TableCell>
+                      <TableCell><Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">{worker.role}</Badge></TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-1">
+                          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground"><Pencil className="w-4 h-4" /></Button>
+                          <Button variant="ghost" size="icon" onClick={() => handleDeleteWorker(worker.id)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-4 h-4" /></Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           </TabsContent>
 
-          {/* Communications Tab */}
-          <TabsContent value="communications">
-            <Card className="bg-zinc-900/50 border-zinc-800 max-w-2xl">
-              <CardHeader>
-                <CardTitle className="text-zinc-50">Publish Announcement</CardTitle>
-                <CardDescription className="text-zinc-400">Share important updates with your team</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handlePublishAnnouncement} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="announcement-title" className="text-zinc-300">Title</Label>
-                    <Input
-                      id="announcement-title"
-                      placeholder="System Update"
-                      value={announcementTitle}
-                      onChange={(e) => setAnnouncementTitle(e.target.value)}
-                      className="bg-zinc-950/50 border-zinc-800 text-zinc-100 focus-visible:ring-emerald-500"
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="announcement-content" className="text-zinc-300">Content</Label>
-                    <textarea
-                      id="announcement-content"
-                      placeholder="Describe the announcement..."
-                      value={announcementContent}
-                      onChange={(e) => setAnnouncementContent(e.target.value)}
-                      className="w-full min-h-[120px] rounded-md bg-zinc-950/50 border border-zinc-800 text-zinc-100 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
-                      required
-                    />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="high-priority"
-                      checked={announcementHighPriority}
-                      onCheckedChange={(checked) => setAnnouncementHighPriority(checked as boolean)}
-                      className="border-zinc-700 data-[state=checked]:bg-emerald-600 data-[state=checked]:border-emerald-600"
-                    />
-                    <Label htmlFor="high-priority" className="text-zinc-300 cursor-pointer">
-                      Mark as High Priority
-                    </Label>
-                  </div>
-                  <Button
-                    type="submit"
-                    className="w-full bg-emerald-600 hover:bg-emerald-500"
-                    disabled={isPublishing}
-                  >
-                    {isPublishing ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
-                    Publish Announcement
+          {/* Departments Tab */}
+          <TabsContent value="departments" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-foreground mb-2">Department Management</h2>
+                <p className="text-sm text-muted-foreground">Organize your institution&apos;s structure</p>
+              </div>
+              <Dialog open={isDeptDialogOpen} onOpenChange={setIsDeptDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-emerald-500/20">
+                    <Plus className="w-4 h-4 mr-2" /> Add Department
                   </Button>
-                </form>
-              </CardContent>
-            </Card>
+                </DialogTrigger>
+                <DialogContent className="bg-card border-border">
+                  <DialogHeader>
+                    <DialogTitle className="text-foreground">Create Department</DialogTitle>
+                    <DialogDescription>Add a new department to your institution</DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label className="text-muted-foreground">Department Name</Label>
+                      <Input value={newDept} onChange={(e) => setNewDept(e.target.value)} className="bg-input border-border" />
+                    </div>
+                  </div>
+                  <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsDeptDialogOpen(false)} className="border-border">Cancel</Button>
+                    <Button onClick={handleAddDepartment} className="bg-emerald-600 hover:bg-emerald-500 text-white">Create Department</Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {departments.map(dept => (
+                <Card key={dept.id} className="bg-card border-border transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-emerald-500/10">
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-foreground text-base">{dept.name}</CardTitle>
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteDepartment(dept.id)} className="text-muted-foreground hover:text-destructive">
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground">
+                      {workers.filter(w => w.department === dept.name).length} workers
+                    </p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </TabsContent>
         </Tabs>
+      </main>
+
+      {/* Floating AI Chat Button */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <Button onClick={() => setChatOpen(!chatOpen)} className="rounded-full bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-500/20 h-14 px-5 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:shadow-emerald-500/30">
+          <Sparkles className="w-5 h-5 mr-2" /> TIR AI Analyst
+        </Button>
       </div>
     </div>
   );
