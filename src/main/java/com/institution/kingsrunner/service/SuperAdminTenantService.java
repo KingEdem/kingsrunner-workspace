@@ -10,6 +10,9 @@ import com.institution.kingsrunner.repository.ModuleAccessRequestRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @Service
 public class SuperAdminTenantService {
 
@@ -23,6 +26,34 @@ public class SuperAdminTenantService {
         this.institutionRepository = institutionRepository;
         this.appUserRepository = appUserRepository;
         this.moduleAccessRequestRepository = moduleAccessRequestRepository;
+    }
+
+    @Transactional
+    public Institution provisionInstitution(String name, String domain) {
+        Institution institution = new Institution();
+        institution.setName(name);
+        institution.setDomain(domain);
+        institution.setInstitutionStatus(InstitutionStatus.ACTIVE);
+        // Default rate limit or theme can be set here if needed
+        return institutionRepository.save(institution);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TenantMetricsResponse> getAllTenantMetrics() {
+        return institutionRepository.findAll().stream()
+                .map(institution -> {
+                    long userCount = appUserRepository.findByInstitutionId(institution.getId()).size();
+                    return new TenantMetricsResponse(
+                        institution.getId(),
+                        institution.getName(),
+                        institution.getInstitutionStatus(),
+                        institution.getDomain(),
+                        userCount,
+                        0, // Placeholder for active logins
+                        institution.getActiveModules().stream().map(Enum::name).collect(Collectors.toList())
+                    );
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional
@@ -78,6 +109,7 @@ public class SuperAdminTenantService {
                 institution.getId(),
                 institution.getName(),
                 institution.getInstitutionStatus(),
+                institution.getDomain(),
                 userCount,
                 activeModuleCount,
                 institution.getUiTheme(),

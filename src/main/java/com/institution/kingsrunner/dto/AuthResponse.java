@@ -5,6 +5,8 @@ public class AuthResponse {
     private String token;
     private String fullName;
     private String role;
+    private String tenantId;
+    private boolean requiresPasswordReset;
 
     public AuthResponse() {
     }
@@ -13,6 +15,21 @@ public class AuthResponse {
         this.token = token;
         this.fullName = fullName;
         this.role = role;
+    }
+
+    public AuthResponse(String token, String fullName, String role, String tenantId) {
+        this.token = token;
+        this.fullName = fullName;
+        this.role = role;
+        this.tenantId = tenantId;
+    }
+
+    public AuthResponse(String token, String fullName, String role, String tenantId, boolean requiresPasswordReset) {
+        this.token = token;
+        this.fullName = fullName;
+        this.role = role;
+        this.tenantId = tenantId;
+        this.requiresPasswordReset = requiresPasswordReset;
     }
 
     public String getToken() {
@@ -37,5 +54,21 @@ public class AuthResponse {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
+    }
+
+    public boolean isRequiresPasswordReset() {
+        return requiresPasswordReset;
+    }
+
+    public void setRequiresPasswordReset(boolean requiresPasswordReset) {
+        this.requiresPasswordReset = requiresPasswordReset;
     }
 }

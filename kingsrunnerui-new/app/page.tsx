@@ -13,6 +13,7 @@ import {
   CollapsibleTrigger,
 } from '@/components/ui/collapsible';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -20,6 +21,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [devBypassOpen, setDevBypassOpen] = useState(false);
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [tempAuthData, setTempAuthData] = useState<any>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,16 +58,48 @@ export default function LoginPage() {
 
         if (response.ok) {
           const data = await response.json();
-          localStorage.setItem('kingsrunner_jwt', data.token);
-          localStorage.setItem('kingsrunner_user', JSON.stringify(data.user));
-          toast.success('Authentication successful');
-          router.push('/hub');
+          if (data.requiresPasswordReset) {
+            setTempAuthData(data);
+            setIsResetModalOpen(true);
+          } else {
+            localStorage.setItem('kingsrunner_jwt', data.token);
+            localStorage.setItem('kingsrunner_user', JSON.stringify(data.user || data));
+            toast.success('Authentication successful');
+            router.push(email.startsWith('admin@') ? '/admin' : '/hub');
+          }
         } else {
           toast.error('Authentication failed');
         }
       }
     } catch (error) {
       toast.error('Connection error. Enable Dev Mock mode.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async () => {
+    if (newPassword !== confirmPassword) return toast.error("Passwords do not match.");
+    if (newPassword.length < 6) return toast.error("Password too short.");
+    
+    setIsLoading(true);
+    try {
+      const res = await fetch('http://localhost:8080/api/auth/change-initial-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${tempAuthData.token}` },
+        body: JSON.stringify({ newPassword })
+      });
+      if (res.ok) {
+        toast.success("Password secured! Welcome.");
+        localStorage.setItem('kingsrunner_jwt', tempAuthData.token);
+        localStorage.setItem('kingsrunner_user', JSON.stringify(tempAuthData.user || tempAuthData));
+        setIsResetModalOpen(false);
+        router.push('/admin');
+      } else {
+        toast.error("Failed to update password.");
+      }
+    } catch (e) {
+      toast.error("Network error.");
     } finally {
       setIsLoading(false);
     }
@@ -147,6 +184,33 @@ export default function LoginPage() {
               {isLoading ? 'Authenticating...' : 'Authenticate'}
             </Button>
           </form>
+
+          {/* Force Password Reset Modal */}
+          <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
+            <DialogContent className="sm:max-w-md bg-card border-border text-foreground">
+              <DialogHeader>
+                <DialogTitle>Secure Your Account</DialogTitle>
+                <DialogDescription>
+                  Welcome! Because this is your first time logging in, you must change your temporary password before accessing the dashboard.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label>New Password</Label>
+                  <Input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="bg-input" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Confirm Password</Label>
+                  <Input type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="bg-input" />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handlePasswordReset} disabled={isLoading} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white">
+                  {isLoading ? 'Securing...' : 'Save & Continue'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* Dev Bypass Accordion */}
           <div className="mt-6 pt-6 border-t border-border">

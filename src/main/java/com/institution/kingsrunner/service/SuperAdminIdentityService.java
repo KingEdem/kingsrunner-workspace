@@ -73,6 +73,7 @@ public class SuperAdminIdentityService {
         admin.setRole(Role.INSTITUTION_ADMIN);
         admin.setInstitution(institution);
         admin.setForcePasswordReset(true);
+        admin.setRequiresPasswordReset(true); // Force password change on first login
 
         // Generate institution-scoped user code: initials + 2-digit ordinal.
         // Count includes all users (any role) already linked to this institution.
@@ -166,5 +167,20 @@ public class SuperAdminIdentityService {
             sb.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
         }
         return sb.toString();
+    }
+
+    public void createInstAdmin(Long institutionId, String email, String password) {
+        Institution institution = institutionRepository.findById(institutionId)
+                .orElseThrow(() -> new RuntimeException("Institution not found"));
+
+        AppUser admin = new AppUser();
+        admin.setFullName("Administrator");
+        admin.setEmail(email);
+        admin.setPassword(passwordEncoder.encode(password));
+        admin.setRole(Role.INSTITUTION_ADMIN);
+        admin.setInstitution(institution);
+        admin.setRequiresPasswordReset(true); // Force password change on first login
+
+        appUserRepository.save(admin);
     }
 }

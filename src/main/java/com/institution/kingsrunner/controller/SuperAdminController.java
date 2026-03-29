@@ -12,6 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -35,6 +36,17 @@ public class SuperAdminController {
     }
 
     // ── Tenant Management ───────────────────────────────────────────────────
+
+    @PostMapping("/tenant/provision")
+    public ResponseEntity<Institution> provisionInstitution(@RequestBody ProvisionTenantRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(tenantService.provisionInstitution(request.getName(), request.getDomain()));
+    }
+
+    @GetMapping("/tenant/all")
+    public ResponseEntity<List<TenantMetricsResponse>> getAllTenants() {
+        return ResponseEntity.ok(tenantService.getAllTenantMetrics());
+    }
 
     @PatchMapping("/tenant/{id}/suspend")
     public ResponseEntity<Institution> suspendInstitution(@PathVariable Long id) {

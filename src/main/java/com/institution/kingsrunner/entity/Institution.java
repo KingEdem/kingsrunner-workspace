@@ -17,6 +17,8 @@ public class Institution {
 
     private String name;
 
+    private String domain;
+
     @Enumerated(EnumType.STRING)
     private Sector sector;
 
@@ -103,5 +105,13 @@ public class Institution {
 
     public void setRateLimit(Integer rateLimit) {
         this.rateLimit = rateLimit;
+    }
+
+    public String getDomain() {
+        return domain;
+    }
+
+    public void setDomain(String domain) {
+        this.domain = domain;
     }
 }

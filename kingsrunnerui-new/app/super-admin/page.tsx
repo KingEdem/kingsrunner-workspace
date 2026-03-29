@@ -13,6 +13,11 @@ import {
   type PendingRequest 
 } from '@/lib/mock-data';
 import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { CheckCircle2, Copy } from 'lucide-react';
 
 interface CommandLogEntry {
   id: string;
@@ -89,6 +94,13 @@ export default function SuperAdminPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const inputRef = useRef<HTMLInputElement>(null);
   const logEndRef = useRef<HTMLDivElement>(null);
+  const [isProvisionOpen, setIsProvisionOpen] = useState(false);
+  const [provName, setProvName] = useState("");
+  const [provDomain, setProvDomain] = useState("");
+  const [provEmail, setProvEmail] = useState("");
+  const [provModules, setProvModules] = useState<string[]>([]);
+  const [generatedPass, setGeneratedPass] = useState("");
+  const [isProvisioning, setIsProvisioning] = useState(false);
 
   const pendingCount = requests.length;
 
@@ -106,6 +118,50 @@ export default function SuperAdminPage() {
   useEffect(() => {
     logEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [commandLog]);
+
+  const handleProvisionSubmit = async () => {
+    if(!provName || !provDomain || !provEmail) return toast.error("Fill all required fields.");
+    setIsProvisioning(true);
+    try {
+        const token = localStorage.getItem("kingsrunner_jwt");
+        const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+        // 1. Create Tenant
+        const tRes = await fetch("http://localhost:8080/api/super-admin/tenant/provision", {
+            method: "POST", headers, body: JSON.stringify({ name: provName, domain: provDomain })
+        });
+        
+        if (!tRes.ok) {
+            throw new Error("Server rejected provisioning request. Check permissions.");
+        }
+        const tenant = await tRes.json();
+
+        // 2. Create Admin Account
+        const tempPass = Math.random().toString(36).slice(-8) + "X9!";
+        const adminRes = await fetch("http://localhost:8080/api/super-admin/identity/create-admin", {
+            method: "POST", headers, body: JSON.stringify({ institutionId: tenant.id, email: provEmail, password: tempPass })
+        });
+
+        if (!adminRes.ok) {
+            throw new Error("Failed to create root admin account.");
+        }
+
+        // 3. Enable Modules
+        for (const mod of provModules) {
+            await fetch(`http://localhost:8080/api/super-admin/modules/${tenant.id}/force-enable`, {
+                method: "POST", headers, body: JSON.stringify({ module: mod })
+            });
+        }
+
+        setGeneratedPass(tempPass);
+        toast.success("Institution provisioned!");
+        // Note: Call your fetchTenants() function here to refresh the UI matrix if it exists
+    } catch(e: any) {
+        toast.error(e.message || "Provisioning failed.");
+    } finally {
+        setIsProvisioning(false);
+    }
+  };
 
   const addLogEntry = (command: string, output: string[], status: 'success' | 'error' | 'info') => {
     const entry: CommandLogEntry = {
@@ -471,6 +527,61 @@ export default function SuperAdminPage() {
           N
         </Button>
       )}
+
+      {/* Provisioning Modal */}
+      <Dialog open={isProvisionOpen} onOpenChange={(open) => { setIsProvisionOpen(open); if(!open) setGeneratedPass(""); }}>
+        <DialogContent className="sm:max-w-[500px] bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800">
+          <DialogHeader>
+            <DialogTitle>Provision New Institution</DialogTitle>
+            <DialogDescription>Initialize a new database tenant and root admin account.</DialogDescription>
+          </DialogHeader>
+          
+          {generatedPass ? (
+            <div className="py-8 text-center space-y-4">
+               <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-4"><CheckCircle2 className="w-8 h-8"/></div>
+               <h3 className="text-xl font-bold">Tenant Activated</h3>
+               <p className="text-sm text-zinc-500">Provide these temporary credentials to the new Institution Admin. They will be forced to change the password upon first login.</p>
+               <div className="bg-zinc-100 dark:bg-zinc-900 p-4 rounded-lg font-mono text-lg flex justify-between items-center border border-zinc-200 dark:border-zinc-800">
+                  <span>{generatedPass}</span>
+                  <Button size="sm" variant="ghost" onClick={() => { navigator.clipboard.writeText(generatedPass); toast.success("Copied!"); }}><Copy className="w-4 h-4"/></Button>
+               </div>
+            </div>
+          ) : (
+            <div className="space-y-4 py-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2"><Label>Institution Name</Label><Input placeholder="e.g. Stanford University" value={provName} onChange={e => setProvName(e.target.value)} /></div>
+                <div className="space-y-2"><Label>Primary Domain</Label><Input placeholder="e.g. stanford.edu" value={provDomain} onChange={e => setProvDomain(e.target.value)} /></div>
+              </div>
+              <div className="space-y-2">
+                <Label>Admin Root Email</Label>
+                <Input placeholder={`admin@${provDomain || 'domain.edu'}`} value={provEmail} onChange={e => setProvEmail(e.target.value)} />
+              </div>
+              <div className="space-y-2 pt-2">
+                <Label>Active ERP Modules</Label>
+                <div className="grid grid-cols-2 gap-2 mt-2">
+                  {["HR_CORE", "FLEET_TRACKING", "INVENTORY", "FINANCE"].map(mod => (
+                    <div key={mod} className="flex items-center space-x-2 border p-2 rounded-lg border-zinc-200 dark:border-zinc-800">
+                      <Checkbox id={mod} checked={provModules.includes(mod)} onCheckedChange={(checked) => {
+                         setProvModules(prev => checked ? [...prev, mod] : prev.filter(m => m !== mod));
+                      }} />
+                      <label htmlFor={mod} className="text-xs font-bold cursor-pointer">{mod.replace('_', ' ')}</label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {!generatedPass && (
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsProvisionOpen(false)}>Cancel</Button>
+              <Button onClick={handleProvisionSubmit} disabled={isProvisioning} className="bg-emerald-600 hover:bg-emerald-500 text-white">
+                {isProvisioning ? "Provisioning Database..." : "Deploy Tenant"}
+              </Button>
+            </DialogFooter>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

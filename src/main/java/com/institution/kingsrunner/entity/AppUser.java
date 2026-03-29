@@ -26,6 +26,8 @@ public class AppUser implements UserDetails {
     @Enumerated(EnumType.STRING)
     private Role role;
 
+    private boolean requiresPasswordReset = false;
+
     // EAGER is intentional: Spring Security's auth filter chain runs before
     // open-in-view, so the Hibernate session is already closed when isEnabled()
     // is evaluated. Eager loading makes this unconditionally safe.
@@ -169,5 +171,13 @@ public class AppUser implements UserDetails {
 
     public void setUserCode(String userCode) {
         this.userCode = userCode;
+    }
+
+    public boolean isRequiresPasswordReset() {
+        return requiresPasswordReset;
+    }
+
+    public void setRequiresPasswordReset(boolean requiresPasswordReset) {
+        this.requiresPasswordReset = requiresPasswordReset;
     }
 }
