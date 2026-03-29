@@ -128,9 +128,7 @@ export default function LoginPage() {
 
           {/* Logo & Header */}
           <div className="flex flex-col items-center mb-6 text-center space-y-2 mt-1">
-            <div className="p-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-inner mb-0.5">
-              <img src="/icon.svg" alt="Institution Runner Logo" className="w-10 h-10 object-contain drop-shadow-md" />
-            </div>
+            <img src="/kingsrunner-logo.png" alt="Kingsrunner Logo" className="h-12 w-auto mx-auto object-contain mb-4" />
             <h1 className="text-xl font-semibold tracking-wide text-zinc-100">
               Institution Runner
             </h1>
