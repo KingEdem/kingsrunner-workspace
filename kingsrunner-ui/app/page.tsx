@@ -41,62 +41,48 @@ export default function LoginPage() {
     }
   };
 
-  const handleStandardLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    setError(null);
 
-    try {
-      const response = await fetch("http://localhost:8080/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email: email,
-          password: password,
-        }),
-      });
+    // Simulate network delay
+    await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          throw new Error("Invalid email or password");
-        }
-        throw new Error("Authentication failed. Please try again.");
-      }
+    // 1. MASTER BYPASS: Super Admin (Infrastructure Level)
+    if (email === "novor@kingsrunner.tech" && password === "admin@123") {
+      toast.success("Super Admin authentication successful.");
+      localStorage.setItem("kingsrunner_role", "super_admin");
+      localStorage.setItem("kingsrunner_user", JSON.stringify({ name: "Novor", role: "Super Admin" }));
+      router.push("/super-admin");
+      return;
+    }
 
-      const data: AuthResponse = await response.json();
+    // 2. MULTI-TENANT ROUTING LOGIC
+    // Extract the domain from the email to determine the institution
+    const emailDomain = email.split('@')[1];
 
-      // Store authentication data
-      localStorage.setItem("kingsrunner_dev_mock", "false");
-      localStorage.setItem("kingsrunner_jwt", data.token);
-      localStorage.setItem("kingsrunner_user", JSON.stringify({
-        fullName: data.fullName,
-        role: data.role
-      }));
+    // Mock Database of Active Institutions and their allowed domains
+    const activeTenants = {
+      "umat.edu.gh": { id: "TENANT_001", name: "University of Mines and Technology" },
+      "ug.edu.gh": { id: "TENANT_002", name: "University of Ghana" },
+      "kingsmedical.com": { id: "TENANT_003", name: "Kings Medical Center" }
+    };
 
-      // Success toast
-      toast.success("Authentication successful", {
-        description: `Welcome back, ${data.fullName}`,
-      });
-
-      // Role-aware routing
-      const role = data.role.toUpperCase();
-      if (role.includes("ADMIN")) {
-        router.push("/admin");
-      } else if (role === "WORKER") {
-        router.push("/hub");
-      } else {
-        router.push("/hub"); // Default fallback
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred";
-      setError(errorMessage);
-      toast.error("Login failed", {
-        description: errorMessage,
-      });
-    } finally {
+    if (!emailDomain || !activeTenants[emailDomain as keyof typeof activeTenants]) {
+      toast.error("Unrecognized institution domain. Contact support.");
       setIsLoading(false);
+      return;
+    }
+
+    // 3. ROLE-BASED ROUTING (Within the verified Tenant)
+    if (email.startsWith("admin@")) {
+      toast.success(`Welcome back, Admin of ${activeTenants[emailDomain as keyof typeof activeTenants].name}`);
+      localStorage.setItem("kingsrunner_role", "institution_admin");
+      router.push("/admin");
+    } else {
+      toast.success(`Welcome to the Hub, Worker of ${activeTenants[emailDomain as keyof typeof activeTenants].name}`);
+      localStorage.setItem("kingsrunner_role", "worker");
+      router.push("/hub");
     }
   };
 
@@ -138,7 +124,7 @@ export default function LoginPage() {
           </div>
 
           {/* Form Container */}
-          <form onSubmit={handleStandardLogin} className="space-y-4">
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-1.5">
               <Label className="text-[10px] font-bold uppercase tracking-widest text-zinc-400">Email Address</Label>
               <div className="relative">
