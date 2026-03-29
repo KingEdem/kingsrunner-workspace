@@ -45,21 +45,30 @@ export default function LoginPage() {
     e.preventDefault();
     setIsLoading(true);
 
+    // Clean the inputs to prevent hidden whitespace errors
+    const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
+
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 1500));
 
     // 1. MASTER BYPASS: Super Admin (Infrastructure Level)
-    if (email === "novor@kingsrunner.tech" && password === "admin@123") {
-      toast.success("Super Admin authentication successful.");
-      localStorage.setItem("kingsrunner_role", "super_admin");
-      localStorage.setItem("kingsrunner_user", JSON.stringify({ name: "Novor", role: "Super Admin" }));
-      router.push("/super-admin");
-      return;
+    if (cleanEmail === "novor@kingsrunner.tech") {
+      if (cleanPassword === "admin@123") {
+        toast.success("Super Admin authentication successful.");
+        localStorage.setItem("kingsrunner_role", "super_admin");
+        localStorage.setItem("kingsrunner_user", JSON.stringify({ name: "Novor", role: "Super Admin" }));
+        router.push("/super-admin");
+      } else {
+        toast.error("Invalid Super Admin credentials.");
+        setIsLoading(false);
+      }
+      return; // Stop execution so it doesn't trigger the tenant check
     }
 
     // 2. MULTI-TENANT ROUTING LOGIC
-    // Extract the domain from the email to determine the institution
-    const emailDomain = email.split('@')[1];
+    // Extract the domain from the email
+    const emailDomain = cleanEmail.split('@')[1];
 
     // Mock Database of Active Institutions and their allowed domains
     const activeTenants = {
@@ -75,7 +84,7 @@ export default function LoginPage() {
     }
 
     // 3. ROLE-BASED ROUTING (Within the verified Tenant)
-    if (email.startsWith("admin@")) {
+    if (cleanEmail.startsWith("admin@")) {
       toast.success(`Welcome back, Admin of ${activeTenants[emailDomain as keyof typeof activeTenants].name}`);
       localStorage.setItem("kingsrunner_role", "institution_admin");
       router.push("/admin");
