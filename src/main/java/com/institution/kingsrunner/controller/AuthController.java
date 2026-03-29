@@ -45,15 +45,9 @@ public class AuthController {
         // 1. MASTER BYPASS: Super Admin Check
         if (email.equals("novor@kingsrunner.tech")) {
             if (password.equals("admin@123")) {
-                // MUST have "ROLE_" prefix for Spring Security @PreAuthorize to work
+                // MUST have "ROLE_" prefix for Spring Security @PreAuthorize
                 String token = jwtService.generateToken("novor@kingsrunner.tech", "ROLE_SUPER_ADMIN", "SYSTEM");
-                
-                Map<String, Object> responseBody = new java.util.HashMap<>();
-                responseBody.put("token", token);
-                responseBody.put("user", java.util.Map.of("name", "Novor", "role", "SUPER_ADMIN"));
-                responseBody.put("requiresPasswordReset", false);
-                
-                return ResponseEntity.ok(responseBody);
+                return ResponseEntity.ok(new AuthResponse(token, "Novor", "ROLE_SUPER_ADMIN", "SYSTEM", false));
             } else {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid Super Admin credentials.");
             }
@@ -67,7 +61,6 @@ public class AuthController {
         String domain = emailParts[1];
 
         // 3. TENANT VALIDATION & AUTHENTICATION
-        // Note: You must inject your existing AuthenticationManager and AppUserRepository
         try {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(email, password)
@@ -75,21 +68,21 @@ public class AuthController {
             
             SecurityContextHolder.getContext().setAuthentication(authentication);
             
-            // Fetch user to get their specific role and tenant ID
             AppUser user = appUserRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("User not found after authentication"));
 
-            // Verify the user's domain matches their registered Tenant domain
             if (!user.getInstitution().getDomain().equalsIgnoreCase(domain)) {
                 return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Domain mismatch. Contact support.");
             }
 
-            // Generate Tenant-Specific Token
-            String token = jwtService.generateToken(user.getEmail(), user.getRole().name(), user.getInstitution().getId().toString());
+            // CRITICAL: Ensure regular user tokens also have the ROLE_ prefix
+            String roleName = "ROLE_" + user.getRole().name();
             
-            return ResponseEntity.ok(new AuthResponse(token, user.getFullName(), user.getRole().name(), user.getInstitution().getId().toString(), user.isForcePasswordReset()));
+            String token = jwtService.generateToken(user.getEmail(), roleName, user.getInstitution().getId().toString());
             
-        } catch (BadCredentialsException e) {
+            return ResponseEntity.ok(new AuthResponse(token, user.getFullName(), roleName, user.getInstitution().getId().toString(), user.isRequiresPasswordReset()));
+            
+        } catch (org.springframework.security.authentication.BadCredentialsException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid credentials.");
         }
     }

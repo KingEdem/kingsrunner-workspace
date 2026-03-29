@@ -132,7 +132,8 @@ export default function SuperAdminPage() {
         });
         
         if (!tRes.ok) {
-            throw new Error("Server rejected provisioning request. Check permissions.");
+            const errData = await tRes.text();
+            throw new Error(`Tenant creation failed: ${errData || tRes.statusText}`);
         }
         const tenant = await tRes.json();
 
@@ -143,21 +144,25 @@ export default function SuperAdminPage() {
         });
 
         if (!adminRes.ok) {
-            throw new Error("Failed to create root admin account.");
+             throw new Error("Tenant created, but failed to create root admin account.");
         }
 
         // 3. Enable Modules
         for (const mod of provModules) {
-            await fetch(`http://localhost:8080/api/super-admin/modules/${tenant.id}/force-enable`, {
+            const modRes = await fetch(`http://localhost:8080/api/super-admin/modules/${tenant.id}/force-enable`, {
                 method: "POST", headers, body: JSON.stringify({ module: mod })
             });
+            if (!modRes.ok) console.error(`Failed to enable module: ${mod}`);
         }
 
         setGeneratedPass(tempPass);
-        toast.success("Institution provisioned!");
-        // Note: Call your fetchTenants() function here to refresh the UI matrix if it exists
+        toast.success("Institution provisioned successfully!");
+        
+        // Refresh UI Matrix if the function exists
+        if (typeof fetchTenants === 'function') fetchTenants();
+        
     } catch(e: any) {
-        toast.error(e.message || "Provisioning failed.");
+        toast.error(e.message || "Provisioning pipeline failed.");
     } finally {
         setIsProvisioning(false);
     }
@@ -441,7 +446,7 @@ export default function SuperAdminPage() {
       {/* Main Terminal Area */}
       <main className="flex-1 flex flex-col min-w-0 min-h-0">
         {/* Terminal Header */}
-        <header className="relative flex items-center justify-between px-4 py-3 pr-28 border-b border-black/20 dark:border-emerald-900/50 bg-white dark:bg-black shrink-0">
+        <header className="relative flex items-center justify-between px-4 py-3 border-b border-black/20 dark:border-emerald-900/50 bg-white dark:bg-black shrink-0">
           <div className="flex items-center gap-4">
             <span className="text-sm text-emerald-700/70 font-medium dark:text-emerald-500/70">institution-runner v2.4.1</span>
             <span className="text-emerald-700/30 dark:text-emerald-500/30">|</span>
@@ -457,14 +462,24 @@ export default function SuperAdminPage() {
               </Badge>
             )}
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleLogout}
-            className="absolute right-4 top-2 h-9 px-3 border-black/70 bg-white text-black hover:bg-black hover:text-white dark:bg-black dark:text-emerald-300 dark:border-emerald-500/40 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-100"
-          >
-            <span className="font-mono text-sm font-semibold tracking-wider">[ ➔ Logout ]</span>
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsProvisionOpen(true)}
+              className="h-9 px-3 border-black/70 bg-white text-black hover:bg-black hover:text-white dark:bg-black dark:text-emerald-300 dark:border-emerald-500/40 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-100"
+            >
+              <span className="font-mono text-sm font-semibold tracking-wider">+ PROVISION TENANT</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleLogout}
+              className="h-9 px-3 border-black/70 bg-white text-black hover:bg-black hover:text-white dark:bg-black dark:text-emerald-300 dark:border-emerald-500/40 dark:hover:bg-emerald-900/30 dark:hover:text-emerald-100"
+            >
+              <span className="font-mono text-sm font-semibold tracking-wider">[ ➔ Logout ]</span>
+            </Button>
+          </div>
         </header>
 
         {/* Terminal Output */}
