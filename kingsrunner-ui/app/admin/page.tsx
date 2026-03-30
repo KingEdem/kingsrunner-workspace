@@ -84,8 +84,15 @@ export default function AdminPage() {
         const user = JSON.parse(userJson);
         console.log("User Role found:", user.role);
 
-        // Strict check based on Role.java: SUPER_ADMIN or INSTITUTION_ADMIN
-        if (user.role === "INSTITUTION_ADMIN" || user.role === "SUPER_ADMIN") {
+        const normalizedRole = (user?.role || "").trim().toUpperCase();
+        const isAuthorizedRole =
+          normalizedRole === "INSTITUTION_ADMIN" ||
+          normalizedRole === "ROLE_INSTITUTION_ADMIN" ||
+          normalizedRole === "SUPER_ADMIN" ||
+          normalizedRole === "ROLE_SUPER_ADMIN";
+
+        // Allow both raw and ROLE_ prefixed role values.
+        if (isAuthorizedRole) {
           setIsAuthorized(true);
           fetchDepartments();
           fetchWorkers();

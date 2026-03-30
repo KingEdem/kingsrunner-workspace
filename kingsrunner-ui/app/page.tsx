@@ -23,75 +23,60 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [isDevMock, setIsDevMock] = useState(false);
 
-  const getRoleRoute = (role: string): string => {
-    // Map backend roles to frontend routes
-    switch (role) {
-      case "WORKER":
-      case "ROLE_WORKER":
-        return "/hub";
-      case "INSTITUTION_ADMIN":
-      case "INST_ADMIN":
-      case "ROLE_INSTITUTION_ADMIN":
-        return "/admin";
-      case "SUPER_ADMIN":
-      case "ROLE_SUPER_ADMIN":
-        return "/super-admin";
-      default:
-        return "/hub"; // Default fallback
-    }
-  };
-
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch("http://localhost:8080/api/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim()
+        }),
+      });
 
-    // Clean the inputs to prevent hidden whitespace errors
-    const cleanEmail = email.trim().toLowerCase();
-    const cleanPassword = password.trim();
-
-    // Simulate network delay
-    await new Promise((resolve) => setTimeout(resolve, 1500));
-
-    // 1. MASTER BYPASS: Super Admin (Infrastructure Level)
-    if (cleanEmail === "novor@kingsrunner.tech") {
-      if (cleanPassword === "admin@123") {
-        toast.success("Super Admin authentication successful.");
-        localStorage.setItem("kingsrunner_role", "super_admin");
-        localStorage.setItem("kingsrunner_user", JSON.stringify({ name: "Novor", role: "Super Admin" }));
-        router.push("/super-admin");
-      } else {
-        toast.error("Invalid Super Admin credentials.");
-        setIsLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Invalid credentials. Access denied.");
       }
-      return; // Stop execution so it doesn't trigger the tenant check
-    }
 
-    // 2. MULTI-TENANT ROUTING LOGIC
-    // Extract the domain from the email
-    const emailDomain = cleanEmail.split('@')[1];
+      const data: AuthResponse = await response.json();
 
-    // Mock Database of Active Institutions and their allowed domains
-    const activeTenants = {
-      "umat.edu.gh": { id: "TENANT_001", name: "University of Mines and Technology" },
-      "ug.edu.gh": { id: "TENANT_002", name: "University of Ghana" },
-      "kingsmedical.com": { id: "TENANT_003", name: "Kings Medical Center" }
-    };
+      const jwt = data.token;
+      if (!jwt) throw new Error("Authentication succeeded, but no token was received.");
+      
+      localStorage.setItem("kingsrunner_jwt", jwt);
+      
+      if (data.role) localStorage.setItem("kingsrunner_role", data.role);
+      localStorage.setItem("kingsrunner_user", JSON.stringify({ fullName: data.fullName, role: data.role }));
 
-    if (!emailDomain || !activeTenants[emailDomain as keyof typeof activeTenants]) {
-      toast.error("Unrecognized institution domain. Contact support.");
+      toast.success("Authentication successful. Initializing session...");
+
+      const normalizedRole = (data.role || "").trim().toUpperCase();
+      console.log("Assigned Role from Backend:", data.role);
+
+      if (normalizedRole === "SUPER_ADMIN" || normalizedRole === "ROLE_SUPER_ADMIN") {
+        router.push("/super-admin");
+      } else if (normalizedRole === "INSTITUTION_ADMIN" || normalizedRole === "ROLE_INSTITUTION_ADMIN") {
+        router.push("/admin");
+      } else if (normalizedRole === "WORKER" || normalizedRole === "ROLE_WORKER") {
+        router.push("/worker-hub");
+      } else {
+        console.warn("Unknown role routed to worker-hub:", data.role);
+        router.push("/worker-hub");
+      }
+
+    } catch (error: any) {
+      console.error("Login Error:", error);
+      setError(error.message || "Connection to authentication server failed.");
+      toast.error(error.message || "Connection to authentication server failed.");
+    } finally {
       setIsLoading(false);
-      return;
-    }
-
-    // 3. ROLE-BASED ROUTING (Within the verified Tenant)
-    if (cleanEmail.startsWith("admin@")) {
-      toast.success(`Welcome back, Admin of ${activeTenants[emailDomain as keyof typeof activeTenants].name}`);
-      localStorage.setItem("kingsrunner_role", "institution_admin");
-      router.push("/admin");
-    } else {
-      toast.success(`Welcome to the Hub, Worker of ${activeTenants[emailDomain as keyof typeof activeTenants].name}`);
-      localStorage.setItem("kingsrunner_role", "worker");
-      router.push("/hub");
     }
   };
 

@@ -38,17 +38,50 @@ export default function SuperAdminPage() {
   const [provName, setProvName] = useState("");
   const [provDomain, setProvDomain] = useState("");
   const [provEmail, setProvEmail] = useState("");
-  const [provTempPassword, setProvTempPassword] = useState("");
   const [provModules, setProvModules] = useState<string[]>([]);
   const [generatedPass, setGeneratedPass] = useState("");
   const [isProvisioning, setIsProvisioning] = useState(false);
 
-  // Mock Global Data
-  const [tenants] = useState([
-    { id: "TEN-001", name: "UMaT", domain: "umat.edu.gh", users: 1240, status: "active" },
-    { id: "TEN-002", name: "University of Ghana", domain: "ug.edu.gh", users: 5420, status: "active" },
-    { id: "TEN-003", name: "Kings Medical", domain: "kingsmedical.com", users: 312, status: "warning" },
-  ]);
+  // Dynamic Global Data
+  const [tenants, setTenants] = useState<any[]>([]);
+  const [dashboardStats, setDashboardStats] = useState({ totalTenants: 0, totalGlobalModules: 0, totalGlobalUsers: 0, systemHealth: "99.9%" });
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        const token = localStorage.getItem("kingsrunner_jwt");
+        if (!token) return;
+        
+        const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
+
+        // Fetch Tenants List
+        const tRes = await fetch("http://localhost:8080/api/super-admin/tenants", { headers });
+        if (tRes.ok) {
+          const tData = await tRes.json();
+          setTenants(tData);
+        }
+
+        // Fetch Global Stats
+        const sRes = await fetch("http://localhost:8080/api/super-admin/stats", { headers });
+        if (sRes.ok) {
+          const sData = await sRes.json();
+          setDashboardStats({
+              totalTenants: sData.totalTenants || 0,
+              totalGlobalModules: sData.totalGlobalModules || 0,
+              totalGlobalUsers: sData.totalGlobalUsers || 0,
+              systemHealth: sData.systemHealth || "99.9%"
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch dynamic dashboard data:", error);
+      } finally {
+        setIsLoadingData(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const cliCommands = [
     { cmd: "sys:health-check", desc: "Run global diagnostics" },
@@ -72,13 +105,13 @@ export default function SuperAdminPage() {
   // --- BACKEND PROVISIONING LOGIC ---
   const handleProvisionSubmit = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (!provName || !provEmail || !provTempPassword) return toast.error("Fill all required fields.");
+    if (!provName || !provEmail || !provDomain) return toast.error("Fill all required fields.");
 
+    // Build the exact payload the Spring Boot DTO expects
     const payload = {
       institutionName: provName,
-      domain: provDomain,
+      allowedDomains: provDomain.split(',').map(d => d.trim().toLowerCase()).filter(d => d),
       adminEmail: provEmail,
-      temporaryPassword: provTempPassword,
       erpModules: provModules,
     };
     console.log("Provision payload:", payload);
@@ -88,22 +121,27 @@ export default function SuperAdminPage() {
         const token = localStorage.getItem("kingsrunner_jwt");
         const headers = { "Content-Type": "application/json", Authorization: `Bearer ${token}` };
 
-        const effectiveDomain = provDomain || provName.toLowerCase().trim().replace(/\s+/g, "-");
-
-        // 1. Create Tenant
+        // 1. Create Tenant (Now sending the PROPER payload stringified)
         const tRes = await fetch("http://localhost:8080/api/super-admin/tenant/provision", {
-            method: "POST", headers, body: JSON.stringify({ name: provName, domain: effectiveDomain })
+            method: "POST", 
+            headers, 
+            body: JSON.stringify(payload)
         });
         
-        if (!tRes.ok) throw new Error("Server rejected provisioning request. Check permissions.");
+        if (!tRes.ok) {
+          const errText = await tRes.text(); console.error("SERVER ERROR BODY:", errText);
+          throw new Error("Server rejected provisioning request.");
+        }
+        
         const tenant = await tRes.json();
 
         // 2. Create Admin Account
         const adminRes = await fetch("http://localhost:8080/api/super-admin/identity/create-admin", {
-          method: "POST", headers, body: JSON.stringify({ institutionId: tenant.id, email: provEmail, password: provTempPassword })
+          method: "POST", headers, body: JSON.stringify({ institutionId: tenant.id, fullName: "Administrator", email: provEmail })
         });
 
         if (!adminRes.ok) throw new Error("Failed to create root admin account.");
+        const adminData = await adminRes.json();
 
         // 3. Enable Modules
         for (const mod of provModules) {
@@ -112,9 +150,14 @@ export default function SuperAdminPage() {
             });
         }
 
-        setGeneratedPass(provTempPassword);
+        setGeneratedPass(adminData.temporaryPassword || "");
         toast.success("Institution provisioned successfully!");
+        
+        // Optional: Force a page reload after a short delay so the dynamic table updates
+        // setTimeout(() => window.location.reload(), 2000); 
+
     } catch(e: any) {
+        console.error("Provisioning Error:", e);
         toast.error(e.message || "Provisioning pipeline failed.");
     } finally {
         setIsProvisioning(false);
@@ -209,25 +252,25 @@ export default function SuperAdminPage() {
                <Card className="bg-white dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800 border-b-[3px] border-b-emerald-500 shadow-sm">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-500"><Database className="w-6 h-6" /></div>
-                  <div><div className="text-3xl font-black">{tenants.length}</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Tenants</p></div>
+                  <div><div className="text-3xl font-black">{dashboardStats.totalTenants}</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Active Tenants</p></div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800 border-b-[3px] border-b-cyan-500 shadow-sm">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-500"><Server className="w-6 h-6" /></div>
-                  <div><div className="text-3xl font-black">12</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Modules</p></div>
+                  <div><div className="text-3xl font-black">{dashboardStats.totalGlobalModules}</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Global Modules</p></div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800 border-b-[3px] border-b-amber-500 shadow-sm">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-500"><Activity className="w-6 h-6" /></div>
-                  <div><div className="text-3xl font-black">6,972</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Users</p></div>
+                  <div><div className="text-3xl font-black">{dashboardStats.totalGlobalUsers.toLocaleString()}</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total Users</p></div>
                 </CardContent>
               </Card>
               <Card className="bg-white dark:bg-zinc-900/80 border border-slate-100 dark:border-zinc-800 border-b-[3px] border-b-red-500 shadow-sm">
                 <CardContent className="p-5 flex items-center gap-4">
                   <div className="p-3 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-500"><ShieldAlert className="w-6 h-6" /></div>
-                  <div><div className="text-3xl font-black">99.9%</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Health</p></div>
+                  <div><div className="text-3xl font-black">{dashboardStats.systemHealth}</div><p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Health</p></div>
                 </CardContent>
               </Card>
             </div>
@@ -250,26 +293,32 @@ export default function SuperAdminPage() {
               </CardHeader>
               <CardContent className="p-0">
                 <div className="divide-y divide-slate-100 dark:divide-zinc-800/50">
-                  {tenants.map(tenant => (
+                  {isLoadingData ? (
+                    <div className="p-8 text-center text-zinc-500 animate-pulse font-mono text-sm">Querying database clusters...</div>
+                  ) : tenants.length === 0 ? (
+                    <div className="p-8 text-center text-zinc-500 font-mono text-sm border-t border-dashed border-zinc-800">No active tenants found in registry.</div>
+                  ) : (
+                    tenants.map(tenant => (
                     <div key={tenant.id} className="flex items-center justify-between p-5 hover:bg-slate-50 dark:hover:bg-zinc-800/30 transition-colors">
                       <div>
                         <div className="flex items-center gap-3">
                           <h4 className="font-bold text-slate-900 dark:text-white">{tenant.name}</h4>
-                          <Badge variant="outline" className={tenant.status === 'active' ? 'border-emerald-500/30 text-emerald-500' : 'border-amber-500/30 text-amber-500'}>
-                            {tenant.status.toUpperCase()}
+                          <Badge variant="outline" className={tenant.status?.toLowerCase() === 'active' ? 'border-emerald-500/30 text-emerald-500' : 'border-amber-500/30 text-amber-500'}>
+                            {tenant.status?.toUpperCase() || 'UNKNOWN'}
                           </Badge>
                         </div>
                         <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
                           <span className="font-mono text-xs">{tenant.id}</span>
-                          <span>Domain: <strong className="text-slate-700 dark:text-zinc-300">@{tenant.domain}</strong></span>
+                          <span>Domain: <strong className="text-slate-700 dark:text-zinc-300">@{tenant.domain || 'N/A'}</strong></span>
                         </div>
                       </div>
                       <div className="text-right">
-                        <div className="text-xl font-black">{tenant.users.toLocaleString()}</div>
+                        <div className="text-xl font-black">{(tenant.userCount || 0).toLocaleString()}</div>
                         <div className="text-[10px] uppercase tracking-wider text-slate-500">Registered Users</div>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -372,25 +421,17 @@ export default function SuperAdminPage() {
                   className="bg-zinc-900 border-emerald-900/40 text-zinc-100 placeholder:text-zinc-500"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Temporary Password</Label>
-                <Input
-                  type="text"
-                  placeholder="Enter temporary password"
-                  value={provTempPassword}
-                  onChange={e => setProvTempPassword(e.target.value)}
-                  className="bg-zinc-900 border-emerald-900/40 text-zinc-100 placeholder:text-zinc-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-zinc-300">Primary Domain (Optional)</Label>
-                <Input
-                  placeholder="e.g. institution.edu"
-                  value={provDomain}
-                  onChange={e => setProvDomain(e.target.value)}
-                  className="bg-zinc-900 border-emerald-900/40 text-zinc-100 placeholder:text-zinc-500"
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label className="text-zinc-300">Allowed Email Domains <span className="text-red-400">*</span></Label>
+                      <Input
+                        placeholder="e.g. umat.edu.gh, st.umat.edu.gh"
+                        value={provDomain}
+                        onChange={e => setProvDomain(e.target.value)}
+                        className="bg-zinc-900 border-emerald-900/40 text-zinc-100 placeholder:text-zinc-500"
+                        required
+                      />
+                      <p className="text-[10px] text-zinc-500">Separate multiple domains with commas. Users must have an email ending in one of these to log in.</p>
+                    </div>
               <div className="space-y-2 pt-2">
                 <Label className="text-zinc-300">ERP Modules</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
